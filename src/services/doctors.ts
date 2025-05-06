@@ -85,10 +85,6 @@ const mockCoordinates: { [key: string]: { lat: number; lng: number } } = {
   "Sétif, Ain Fouara": { lat: 36.1900, lng: 5.4091 },
 };
 
-// Initial mock doctors data is now empty. All doctors will be sourced from the mock DB.
-const initialMockDoctors: Doctor[] = [];
-
-
 /**
  * Asynchronously retrieves a list of doctors.
  * This function fetches from the mock Firestore `users` collection.
@@ -104,20 +100,20 @@ export async function getDoctors(): Promise<Doctor[]> {
     const userData = allUserData[userId];
     if (userData.role === 'doctor') {
       doctorsFromDb.push({
-        id: userId,
+        id: userId, // Ensure id is mapped correctly
         name: userData.name || 'اسم غير معروف',
         specialty: userData.specialty || 'تخصص غير محدد',
-        location: userData.location || 'موقع غير محدد', // This is the address
+        location: userData.location || 'موقع غير محدد',
         wilaya: userData.wilaya || 'ولاية غير محددة',
-        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates], // Fallback to mock coordinates if available
-        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userId.substring(0,10)}/300/300`, // This is the photo
+        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates],
+        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userId.substring(0,10)}/300/300`,
         bio: userData.bio || 'لا توجد نبذة تعريفية.',
         availableSlots: userData.availableSlots,
         phoneNumber: userData.phoneNumber,
-        experience: userData.experience || 'غير محدد', // This is the experience
+        experience: userData.experience || 'غير محدد',
         skills: userData.skills || 'غير محدد',
         equipment: userData.equipment || 'غير محدد',
-        rating: userData.rating !== undefined ? Number(userData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)), // This is the rating
+        rating: userData.rating !== undefined ? Number(userData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)),
       });
     }
   }
@@ -138,7 +134,7 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
     const userData = userDoc.data();
     if (userData.role === 'doctor') {
       return {
-        id: id,
+        id: id, // Ensure id is mapped correctly
         name: userData.name || 'اسم غير معروف',
         specialty: userData.specialty || 'تخصص غير محدد',
         location: userData.location || 'موقع غير محدد',
@@ -194,7 +190,7 @@ export function getAllAlgerianWilayas(): string[] {
 
 // Helper to simulate updating user data in the mock Firestore
 // This is used in doctor profile page.
-export async function updateDoctorProfileInMock(uid: string, data: Partial<Doctor>) {
+export async function updateDoctorProfileInMock(uid: string, data: Partial<Doctor & {name: string, email: string, updatedAt: string}>) {
     const userDocPath = `users/${uid}`;
     const existingData = (await db.getDoc(userDocPath).then(doc => doc.exists() ? doc.data() : {})) || {};
     
@@ -207,3 +203,4 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
     };
     await db.setDoc(userDocPath, updatedData);
 }
+

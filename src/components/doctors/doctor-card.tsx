@@ -39,7 +39,7 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
       <CardHeader className="p-0 relative h-56">
         <Image
-          src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`} // Photo
+          src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`}
           alt={`صورة ${doctor.name}`}
           layout="fill"
           objectFit="cover"
@@ -51,7 +51,7 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
         <CardTitle className="text-2xl font-bold mb-3 text-primary">{doctor.name}</CardTitle>
         <div className="space-y-3">
           <DetailItem icon={Briefcase} label="التخصص" value={doctor.specialty} /> 
-          <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} /> {/* Address */}
+          <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} />
           <DetailItem icon={Sparkles} label="الخبرة" value={doctor.experience} />
           {doctor.rating !== undefined && <DetailItem icon={Star} label="التقييم" value={doctor.rating} isRating />}
           <DetailItem icon={Globe} label="الولاية" value={doctor.wilaya} />
@@ -77,3 +77,4 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
     </Card>
   );
 }
+
