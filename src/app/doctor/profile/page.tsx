@@ -13,11 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2 } from 'lucide-react';
+import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2, Star } from 'lucide-react';
 import { db } from '@/lib/firebase'; // For Firestore operations
 import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfileInMock, type Doctor } from '@/services/doctors'; // For dropdowns and mock update
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 
 // Schema for doctor profile
 const doctorProfileSchema = z.object({
@@ -32,6 +33,7 @@ const doctorProfileSchema = z.object({
   skills: z.string().max(500, "المهارات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
   equipment: z.string().max(500, "المعدات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
   imageUrl: z.string().url({ message: "الرجاء إدخال رابط صورة صحيح أو تركه فارغًا." }).optional().or(z.literal('')),
+  rating: z.number().min(0).max(5).optional(),
 });
 
 type DoctorProfileFormValues = z.infer<typeof doctorProfileSchema>;
@@ -62,6 +64,7 @@ export default function DoctorProfilePage() {
       skills: '',
       equipment: '',
       imageUrl: '',
+      rating: 4.0, // Default rating
     },
   });
 
@@ -97,6 +100,7 @@ export default function DoctorProfilePage() {
               skills: data.skills || '',
               equipment: data.equipment || '',
               imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
+              rating: data.rating === undefined ? 4.0 : Number(data.rating), // Ensure rating is a number
             });
             setImagePreview(data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
           } else {
@@ -104,6 +108,7 @@ export default function DoctorProfilePage() {
                 displayName: user.displayName || '',
                 email: user.email || '',
                 imageUrl: `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
+                rating: 4.0,
              });
              setImagePreview(`https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
           }
@@ -138,6 +143,7 @@ export default function DoctorProfilePage() {
         skills: data.skills,
         equipment: data.equipment,
         imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`, // Default if empty
+        rating: data.rating,
         updatedAt: new Date().toISOString(),
       };
       
@@ -403,6 +409,29 @@ export default function DoctorProfilePage() {
                     <Textarea placeholder="مثال: جهاز سونار رباعي الأبعاد, جهاز تخطيط دماغ (يفضل فصلها بفاصلة)" className="min-h-[100px]" {...field} value={field.value || ''}/>
                   </FormControl>
                   <FormDescription>اذكر أي معدات أو أجهزة متطورة متوفرة في عيادتك.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="rating"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-md flex items-center gap-1"><Star size={16}/> التقييم (لأغراض العرض فقط)</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center gap-4">
+                       <Slider
+                        defaultValue={[field.value ?? 4]}
+                        max={5}
+                        step={0.1}
+                        onValueChange={(value) => field.onChange(value[0])}
+                        className="w-[calc(100%-4rem)]"
+                      />
+                      <span className="text-lg font-semibold w-16 text-center">{field.value?.toFixed(1)}</span>
+                    </div>
+                  </FormControl>
+                   <FormDescription>هذا الحقل لأغراض العرض والتجربة. في تطبيق حقيقي، يتم حسابه بناءً على تقييمات المرضى.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -3,20 +3,30 @@ import Link from 'next/link';
 import type { Doctor } from '@/services/doctors';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, MapPin, Briefcase, Globe, Sparkles, Brain, Settings2, Info } from 'lucide-react';
+import { Stethoscope, MapPin, Briefcase, Globe, Sparkles, Brain, Settings2, Info, Star } from 'lucide-react';
 
 interface DoctorCardProps {
   doctor: Doctor;
 }
 
-const DetailItem: React.FC<{ icon: React.ElementType; label: string; value?: string }> = ({ icon: Icon, label, value }) => {
-  if (!value || value.trim() === '' || value.trim().toLowerCase() === 'غير محدد') return null;
+const DetailItem: React.FC<{ icon: React.ElementType; label: string; value?: string | number; isRating?: boolean }> = ({ icon: Icon, label, value, isRating = false }) => {
+  if (value === undefined || value === null || (typeof value === 'string' && (value.trim() === '' || value.trim().toLowerCase() === 'غير محدد'))) return null;
+  
+  const displayValue = isRating && typeof value === 'number' ? `${value.toFixed(1)} / 5` : value;
+
   return (
     <div className="flex items-start gap-2 text-sm">
       <Icon size={16} className="text-accent mt-0.5 shrink-0" />
       <div>
         <strong className="font-medium">{label}:</strong>
-        <p className="text-foreground/80 leading-relaxed">{value}</p>
+        {isRating && typeof value === 'number' ? (
+          <span className="text-foreground/80 leading-relaxed flex items-center gap-1">
+            {displayValue}
+            <Star size={14} className="text-yellow-400 fill-yellow-400" />
+          </span>
+        ) : (
+           <p className="text-foreground/80 leading-relaxed">{displayValue}</p>
+        )}
       </div>
     </div>
   );
@@ -42,6 +52,7 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
           <DetailItem icon={Briefcase} label="التخصص" value={doctor.specialty} />
           <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} />
           <DetailItem icon={Globe} label="الولاية" value={doctor.wilaya} />
+          {doctor.rating !== undefined && <DetailItem icon={Star} label="التقييم" value={doctor.rating} isRating />}
           
           {doctor.bio && doctor.bio.trim() !== '' && doctor.bio.trim().toLowerCase() !== 'لا توجد نبذة تعريفية.' && (
              <div className="pt-2 mt-2 border-t border-border/50">

@@ -56,6 +56,10 @@ export interface Doctor {
    * List of special equipment available at the clinic. (e.g., comma-separated string)
    */
   equipment?: string;
+  /**
+   * The doctor's rating (out of 5).
+   */
+  rating?: number;
 }
 
 // Sample Algerian Wilayas
@@ -102,6 +106,7 @@ const initialMockDoctors: Doctor[] = [
       experience: '15+ سنة خبرة، عمل سابق في مستشفى مصطفى باشا.',
       skills: 'قسطرة قلبية, تركيب دعامات, تخطيط صدى القلب',
       equipment: 'جهاز تخطيط القلب (ECG), جهاز صدى القلب (ECHO)',
+      rating: 4.8,
     },
     {
       id: 'mock-doc-2', // Example UID
@@ -117,6 +122,7 @@ const initialMockDoctors: Doctor[] = [
       experience: '10 سنوات خبرة في مجال الجلدية والتجميل.',
       skills: 'علاج حب الشباب, إزالة الشعر بالليزر, حقن الفيلر والبوتكس',
       equipment: 'جهاز ليزر لإزالة الشعر, جهاز ديرمابن',
+      rating: 4.5,
     },
     {
       id: 'mock-doc-3',
@@ -131,6 +137,7 @@ const initialMockDoctors: Doctor[] = [
       experience: '8 سنوات خبرة في متابعة نمو الأطفال وعلاج أمراض الطفولة الشائعة.',
       skills: 'تطعيمات الأطفال, متابعة النمو والتطور, علاج حساسية الأطفال',
       equipment: 'ميزان أطفال دقيق, جهاز قياس الصفراء',
+      rating: 4.7,
     },
     {
       id: 'mock-doc-4',
@@ -146,6 +153,7 @@ const initialMockDoctors: Doctor[] = [
       experience: '12 سنة خبرة، متخصصة في أمراض المعدة والقولون.',
       skills: 'تنظير المعدة والقولون, علاج ارتجاع المريء, متابعة مرضى السكري',
       equipment: 'جهاز منظار داخلي, جهاز قياس سكر الدم',
+      rating: 4.2,
     },
      {
       id: 'mock-doc-5',
@@ -160,6 +168,7 @@ const initialMockDoctors: Doctor[] = [
       experience: 'خبرة 20 عاماً في جراحات العيون بالليزر والماء الأبيض.',
       skills: 'جراحة الماء الأبيض (الكاتاراكت), تصحيح النظر بالليزك, علاج الجلوكوما',
       equipment: 'جهاز فحص قاع العين, جهاز قياس ضغط العين',
+      rating: 4.9,
     },
     {
       id: 'mock-doc-6',
@@ -174,6 +183,7 @@ const initialMockDoctors: Doctor[] = [
       experience: '14 سنة خبرة في متابعة حالات الحمل عالية الخطورة وإجراء الولادات.',
       skills: 'متابعة الحمل, ولادة طبيعية وقيصرية, تركيب اللولب الهرموني',
       equipment: 'جهاز سونار (إيكوغرافيا), جهاز تخطيط قلب الجنين',
+      rating: 4.6,
     },
     {
       id: 'mock-doc-7',
@@ -188,6 +198,7 @@ const initialMockDoctors: Doctor[] = [
       experience: 'استشاري وخبرة 18 عاماً.',
       skills: 'قسطرة تشخيصية وعلاجية, علاج اضطرابات نظم القلب.',
       equipment: 'جهاز هولتر لمراقبة نظم القلب, جهاز اختبار الجهد.',
+      rating: 4.7,
     }
 ];
 
@@ -232,6 +243,7 @@ export async function getDoctors(): Promise<Doctor[]> {
           experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
           skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
           equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
+          rating: userData.rating || initialDoctorData?.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1), // Mock rating if not present
         });
       }
     }
@@ -242,7 +254,10 @@ export async function getDoctors(): Promise<Doctor[]> {
   const combinedDoctors: Doctor[] = [...doctorsFromDb];
   initialMockDoctors.forEach(initialDoc => {
     if (!combinedDoctors.find(dbDoc => dbDoc.id === initialDoc.id)) {
-      combinedDoctors.push(initialDoc);
+      combinedDoctors.push({
+        ...initialDoc,
+        rating: initialDoc.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1) // Ensure rating for initial mocks too
+      });
     }
   });
   
@@ -277,12 +292,18 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
         experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
         skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
         equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
+        rating: userData.rating || initialDoctorData?.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1), // Mock rating if not present
       };
     }
   }
   // Fallback to initialMockDoctors if not in DB (simulates doctor not having completed profile yet)
   const initialDoctor = initialMockDoctors.find(doc => doc.id === id);
-  if (initialDoctor) return initialDoctor;
+  if (initialDoctor) {
+    return {
+      ...initialDoctor,
+      rating: initialDoctor.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1) // Ensure rating for initial mocks too
+    };
+  }
   
   return null;
 }
@@ -354,6 +375,7 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
       ...data, // New data from profile form
       role: 'doctor', // Ensure role is doctor
       updatedAt: new Date().toISOString(),
+      rating: existingData.rating || data.rating || (Math.random() * (5-3.5) + 3.5).toFixed(1) // Preserve or mock rating
     };
     await db.setDoc(userDocPath, updatedData);
 
@@ -379,6 +401,7 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
              experience: updatedData.experience,
              skills: updatedData.skills,
              equipment: updatedData.equipment,
+             rating: updatedData.rating,
         });
     }
 }
