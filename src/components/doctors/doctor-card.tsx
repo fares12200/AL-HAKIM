@@ -1,3 +1,4 @@
+
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Doctor } from '@/services/doctors';
@@ -10,7 +11,7 @@ interface DoctorCardProps {
 }
 
 const DetailItem: React.FC<{ icon: React.ElementType; label: string; value?: string | number; isRating?: boolean }> = ({ icon: Icon, label, value, isRating = false }) => {
-  if (value === undefined || value === null || (typeof value === 'string' && (value.trim() === '' || value.trim().toLowerCase() === 'غير محدد'))) return null;
+  if (value === undefined || value === null || (typeof value === 'string' && (value.trim() === '' || value.trim().toLowerCase() === 'غير محدد' || value.trim().toLowerCase() === 'لا توجد نبذة تعريفية.'))) return null;
   
   const displayValue = isRating && typeof value === 'number' ? `${value.toFixed(1)} / 5` : value;
 
@@ -25,7 +26,7 @@ const DetailItem: React.FC<{ icon: React.ElementType; label: string; value?: str
             <Star size={14} className="text-yellow-400 fill-yellow-400" />
           </span>
         ) : (
-           <p className="text-foreground/80 leading-relaxed">{displayValue}</p>
+           <p className="text-foreground/80 leading-relaxed">{String(displayValue)}</p>
         )}
       </div>
     </div>
@@ -38,7 +39,7 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
       <CardHeader className="p-0 relative h-56">
         <Image
-          src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`}
+          src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`} // Photo
           alt={`صورة ${doctor.name}`}
           layout="fill"
           objectFit="cover"
@@ -49,20 +50,16 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
       <CardContent className="p-6 flex-grow">
         <CardTitle className="text-2xl font-bold mb-3 text-primary">{doctor.name}</CardTitle>
         <div className="space-y-3">
-          <DetailItem icon={Briefcase} label="التخصص" value={doctor.specialty} />
-          <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} />
-          <DetailItem icon={Globe} label="الولاية" value={doctor.wilaya} />
+          <DetailItem icon={Briefcase} label="التخصص" value={doctor.specialty} /> 
+          <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} /> {/* Address */}
+          <DetailItem icon={Sparkles} label="الخبرة" value={doctor.experience} />
           {doctor.rating !== undefined && <DetailItem icon={Star} label="التقييم" value={doctor.rating} isRating />}
+          <DetailItem icon={Globe} label="الولاية" value={doctor.wilaya} />
           
-          {doctor.bio && doctor.bio.trim() !== '' && doctor.bio.trim().toLowerCase() !== 'لا توجد نبذة تعريفية.' && (
-             <div className="pt-2 mt-2 border-t border-border/50">
-                <DetailItem icon={Info} label="نبذة تعريفية" value={doctor.bio} />
-            </div>
-          )}
+          {doctor.bio && <DetailItem icon={Info} label="نبذة تعريفية" value={doctor.bio} />}
 
-          {(doctor.experience || doctor.skills || doctor.equipment) && (
+          {(doctor.skills || doctor.equipment) && (
             <div className="pt-3 mt-3 border-t border-border/50 space-y-3">
-                <DetailItem icon={Sparkles} label="الخبرة" value={doctor.experience} />
                 <DetailItem icon={Brain} label="المهارات والإجراءات" value={doctor.skills} />
                 <DetailItem icon={Settings2} label="المعدات والتجهيزات" value={doctor.equipment} />
             </div>

@@ -1,3 +1,4 @@
+
 import { db } from '@/lib/firebase'; // Import db to potentially fetch doctor details
 
 /**
@@ -17,7 +18,7 @@ export interface Doctor {
    */
   specialty: string;
   /**
-   * The doctor's location (general address string).
+   * The doctor's location (general address string). This serves as the address.
    */
   location: string;
   /**
@@ -29,7 +30,7 @@ export interface Doctor {
    */
   coordinates?: { lat: number; lng: number };
   /**
-   * URL of the doctor's profile picture.
+   * URL of the doctor's profile picture. This is the photo.
    */
   imageUrl: string;
   /**
@@ -45,7 +46,7 @@ export interface Doctor {
   */
   phoneNumber?: string;
   /**
-   * Doctor's years of experience or a description of their experience.
+   * Doctor's years of experience or a description of their experience. This is the experience.
    */
   experience?: string;
   /**
@@ -57,7 +58,7 @@ export interface Doctor {
    */
   equipment?: string;
   /**
-   * The doctor's rating (out of 5).
+   * The doctor's rating (out of 5). This is the rating.
    */
   rating?: number;
 }
@@ -77,11 +78,6 @@ const algerianWilayas = [
 
 // Mock coordinates for some locations in Algeria
 const mockCoordinates: { [key: string]: { lat: number; lng: number } } = {
-  "الرياض، حي العليا": { lat: 24.7136, lng: 46.6753 }, // Kept for existing data, not Algerian
-  "جدة، حي الروضة": { lat: 21.5433, lng: 39.1728 },   // Kept for existing data, not Algerian
-  "الدمام، حي الشاطئ": { lat: 26.4207, lng: 50.0888 }, // Kept for existing data, not Algerian
-  "مكة المكرمة، حي العزيزية": { lat: 21.3891, lng: 39.8579 }, // Kept for existing data, not Algerian
-  "المدينة المنورة، سلطانة": { lat: 24.4686, lng: 39.6142 }, // Kept for existing data, not Algerian
   "Alger, Centre": { lat: 36.7754, lng: 3.0589 },
   "Oran, Sidi El Houari": { lat: 35.7051, lng: -0.6491 },
   "Constantine, Kasbah": { lat: 36.3650, lng: 6.6120 },
@@ -95,63 +91,37 @@ const initialMockDoctors: Doctor[] = [];
 
 /**
  * Asynchronously retrieves a list of doctors.
- * This function tries to fetch from the mock Firestore `users` collection if a doctor has updated their profile.
- * Otherwise, it falls back to `initialMockDoctors`.
+ * This function fetches from the mock Firestore `users` collection.
  * @returns A promise that resolves to an array of Doctor objects.
  */
 export async function getDoctors(): Promise<Doctor[]> {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
 
   const doctorsFromDb: Doctor[] = [];
-  // In a real scenario, this would be a Firestore query for all users with role 'doctor'
-  // For mock, we iterate over our simulated 'users' collection in firebase.ts
-  // This is a simplified approach as db.getDoc in mock only takes path.
-  // A real implementation would need db.getDocs(collection(db, 'users')) and then filter.
-  // For the mock, we'll stick to hydrating initialMockDoctors with data from the users store.
-
-  const allUserIds = Object.keys(await db.getAllUsersForMock()); // Helper to get all UIDs, needs to be added to mock firebase.ts
+  const allUserData = await db.getAllUsersForMock(); // Helper to get all user data
   
-  for (const userId of allUserIds) {
-    const userDoc = await db.getDoc(`users/${userId}`);
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
-      if (userData.role === 'doctor') {
-        // Find if this doctor exists in the initial mock list to get base data if needed
-        const initialDoctorData = initialMockDoctors.find(d => d.id === userId);
-        
-        doctorsFromDb.push({
-          id: userId,
-          name: userData.name || initialDoctorData?.name || 'اسم غير معروف',
-          specialty: userData.specialty || initialDoctorData?.specialty || 'تخصص غير محدد',
-          location: userData.location || initialDoctorData?.location || 'موقع غير محدد',
-          wilaya: userData.wilaya || initialDoctorData?.wilaya || 'ولاية غير محددة',
-          coordinates: userData.coordinates || initialDoctorData?.coordinates,
-          imageUrl: userData.imageUrl || initialDoctorData?.imageUrl || `https://picsum.photos/seed/${userId.substring(0,10)}/300/300`,
-          bio: userData.bio || initialDoctorData?.bio || 'لا توجد نبذة تعريفية.',
-          availableSlots: userData.availableSlots || initialDoctorData?.availableSlots,
-          phoneNumber: userData.phoneNumber || initialDoctorData?.phoneNumber,
-          experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
-          skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
-          equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
-          rating: userData.rating !== undefined ? Number(userData.rating) : (initialDoctorData?.rating !== undefined ? Number(initialDoctorData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1))),
-        });
-      }
-    }
-  }
-
-  // To ensure initialMockDoctors are present if not in DB (e.g. new mock doctor not "registered" yet)
-  // and to avoid duplicates, merge them carefully.
-  const combinedDoctors: Doctor[] = [...doctorsFromDb];
-  initialMockDoctors.forEach(initialDoc => {
-    if (!combinedDoctors.find(dbDoc => dbDoc.id === initialDoc.id)) {
-      combinedDoctors.push({
-        ...initialDoc,
-        rating: initialDoc.rating !== undefined ? Number(initialDoc.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)) // Ensure rating for initial mocks too
+  for (const userId in allUserData) {
+    const userData = allUserData[userId];
+    if (userData.role === 'doctor') {
+      doctorsFromDb.push({
+        id: userId,
+        name: userData.name || 'اسم غير معروف',
+        specialty: userData.specialty || 'تخصص غير محدد',
+        location: userData.location || 'موقع غير محدد', // This is the address
+        wilaya: userData.wilaya || 'ولاية غير محددة',
+        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates], // Fallback to mock coordinates if available
+        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userId.substring(0,10)}/300/300`, // This is the photo
+        bio: userData.bio || 'لا توجد نبذة تعريفية.',
+        availableSlots: userData.availableSlots,
+        phoneNumber: userData.phoneNumber,
+        experience: userData.experience || 'غير محدد', // This is the experience
+        skills: userData.skills || 'غير محدد',
+        equipment: userData.equipment || 'غير محدد',
+        rating: userData.rating !== undefined ? Number(userData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)), // This is the rating
       });
     }
-  });
-  
-  return combinedDoctors;
+  }
+  return doctorsFromDb;
 }
 
 /**
@@ -167,34 +137,24 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
   if (userDoc.exists()) {
     const userData = userDoc.data();
     if (userData.role === 'doctor') {
-      const initialDoctorData = initialMockDoctors.find(d => d.id === id);
       return {
         id: id,
-        name: userData.name || initialDoctorData?.name || 'اسم غير معروف',
-        specialty: userData.specialty || initialDoctorData?.specialty || 'تخصص غير محدد',
-        location: userData.location || initialDoctorData?.location || 'موقع غير محدد',
-        wilaya: userData.wilaya || initialDoctorData?.wilaya || 'ولاية غير محددة',
-        coordinates: userData.coordinates || initialDoctorData?.coordinates,
-        imageUrl: userData.imageUrl || initialDoctorData?.imageUrl || `https://picsum.photos/seed/${id.substring(0,10)}/300/300`,
-        bio: userData.bio || initialDoctorData?.bio || 'لا توجد نبذة تعريفية.',
-        availableSlots: userData.availableSlots || initialDoctorData?.availableSlots,
-        phoneNumber: userData.phoneNumber || initialDoctorData?.phoneNumber,
-        experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
-        skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
-        equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
-        rating: userData.rating !== undefined ? Number(userData.rating) : (initialDoctorData?.rating !== undefined ? Number(initialDoctorData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1))),
+        name: userData.name || 'اسم غير معروف',
+        specialty: userData.specialty || 'تخصص غير محدد',
+        location: userData.location || 'موقع غير محدد',
+        wilaya: userData.wilaya || 'ولاية غير محددة',
+        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates],
+        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${id.substring(0,10)}/300/300`,
+        bio: userData.bio || 'لا توجد نبذة تعريفية.',
+        availableSlots: userData.availableSlots,
+        phoneNumber: userData.phoneNumber,
+        experience: userData.experience || 'غير محدد',
+        skills: userData.skills || 'غير محدد',
+        equipment: userData.equipment || 'غير محدد',
+        rating: userData.rating !== undefined ? Number(userData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)),
       };
     }
   }
-  // Fallback to initialMockDoctors if not in DB (simulates doctor not having completed profile yet)
-  const initialDoctor = initialMockDoctors.find(doc => doc.id === id);
-  if (initialDoctor) {
-    return {
-      ...initialDoctor,
-      rating: initialDoctor.rating !== undefined ? Number(initialDoctor.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)) // Ensure rating for initial mocks too
-    };
-  }
-  
   return null;
 }
 
@@ -203,9 +163,6 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
 * @returns A promise that resolves to an array of unique specialties.
 */
 export async function getUniqueSpecialties(): Promise<string[]> {
-  // For simplicity and to ensure all potential specialties are available for doctors to choose,
-  // we can have a predefined list or union of mock data and any dynamically added ones.
-  // For now, using a broader list and then filtering from actual doctors.
   const predefinedSpecialties = [
     'أمراض القلب والشرايين',
     'الأمراض الجلدية والتناسلية',
@@ -224,35 +181,16 @@ export async function getUniqueSpecialties(): Promise<string[]> {
     'التغذية العلاجية',
   ];
   const doctors = await getDoctors();
-  const dynamicSpecialties = doctors.map(doc => doc.specialty);
+  const dynamicSpecialties = doctors.map(doc => doc.specialty).filter(Boolean); // Filter out undefined/null
   return [...new Set([...predefinedSpecialties, ...dynamicSpecialties])].sort((a,b) => a.localeCompare(b, 'ar'));
 }
 
-/**
-* Returns a list of unique Algerian Wilayas from the available doctors.
-* @returns A promise that resolves to an array of unique Wilayas.
-*/
-export async function getUniqueWilayas(): Promise<string[]> {
-  const doctors = await getDoctors();
-  const wilayas = doctors.map(doc => doc.wilaya);
-  return [...new Set(wilayas)].sort((a,b) => a.localeCompare(b, 'ar')); // Sort for consistent display
-}
 
 // Function to get all Algerian Wilayas (can be used for dropdowns)
 export function getAllAlgerianWilayas(): string[] {
   return algerianWilayas.sort((a,b) => a.localeCompare(b, 'ar'));
 }
 
-// Helper function to add a new doctor to the initialMockDoctors list (for simulation purposes)
-// In a real app, this would be handled by the doctor registration process creating a document in Firestore.
-export function addMockDoctor(doctorData: Doctor) {
-  const existingIndex = initialMockDoctors.findIndex(d => d.id === doctorData.id);
-  if (existingIndex > -1) {
-    initialMockDoctors[existingIndex] = doctorData; // Update if exists
-  } else {
-    initialMockDoctors.push(doctorData); // Add if new
-  }
-}
 
 // Helper to simulate updating user data in the mock Firestore
 // This is used in doctor profile page.
@@ -265,34 +203,7 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
       ...data, // New data from profile form
       role: 'doctor', // Ensure role is doctor
       updatedAt: new Date().toISOString(),
-      rating: data.rating !== undefined ? Number(data.rating) : (existingData.rating !== undefined ? Number(existingData.rating) : parseFloat((Math.random() * (5-3.5) + 3.5).toFixed(1))) // Preserve or mock rating
+      rating: data.rating !== undefined ? Number(data.rating) : (existingData.rating !== undefined ? Number(existingData.rating) : parseFloat((Math.random() * (5-3.5) + 3.5).toFixed(1))) 
     };
     await db.setDoc(userDocPath, updatedData);
-
-    // Also update the initialMockDoctors if the ID matches one of the mock doctors
-    // This helps keep the mock data somewhat consistent for display purposes elsewhere
-    const mockDoctorIndex = initialMockDoctors.findIndex(d => d.id === uid);
-    if (mockDoctorIndex !== -1) {
-      initialMockDoctors[mockDoctorIndex] = {
-        ...initialMockDoctors[mockDoctorIndex],
-        ...updatedData, // apply all updates
-      } as Doctor; // Ensure type correctness
-    } else {
-        // If doctor not in initialMock, add them (though ideally they should be if they are a mock doctor)
-        // This might happen if a new user registers as a doctor and they weren't in the initial hardcoded list.
-        initialMockDoctors.push({
-             id: uid,
-             name: updatedData.name || "طبيب جديد",
-             specialty: updatedData.specialty || "تخصص غير محدد",
-             location: updatedData.location || "موقع غير محدد",
-             wilaya: updatedData.wilaya || "ولاية غير محددة",
-             imageUrl: updatedData.imageUrl || `https://picsum.photos/seed/${uid.substring(0,10)}/300/300`,
-             bio: updatedData.bio || "لا توجد نبذة.",
-             experience: updatedData.experience,
-             skills: updatedData.skills,
-             equipment: updatedData.equipment,
-             rating: updatedData.rating !== undefined ? Number(updatedData.rating) : parseFloat((Math.random() * (5-3.5) + 3.5).toFixed(1)),
-        });
-    }
 }
-
