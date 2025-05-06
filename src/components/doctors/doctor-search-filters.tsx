@@ -37,7 +37,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (name) params.set('name', name);
+    if (name.trim()) params.set('name', name.trim());
     if (selectedSpecialty && selectedSpecialty !== ALL_FILTER_VALUE) {
       params.set('specialty', selectedSpecialty);
     }
@@ -77,7 +77,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
         params.set('lat', latitude.toString());
         params.set('lng', longitude.toString());
         // Keep other filters if they are set
-        if (name) params.set('name', name);
+        if (name.trim()) params.set('name', name.trim());
         if (selectedSpecialty && selectedSpecialty !== ALL_FILTER_VALUE) {
           params.set('specialty', selectedSpecialty);
         }
@@ -189,9 +189,9 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
             disabled={isPending || isLocating}
           >
             {isLocating ? (
-              <Loader2 className="animate-spin" size={20} />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <MapPin size={20} />
+              <MapPin className="mr-2 h-4 w-4" />
             )}
             البحث قرب موقعي الحالي
           </Button>
@@ -201,7 +201,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
             className="w-full sm:w-auto text-muted-foreground hover:text-destructive"
             disabled={isPending}
           >
-            <RotateCcw size={20} />
+            <RotateCcw className="mr-2 h-4 w-4" />
             إعادة تعيين الفلاتر
           </Button>
           <Button
@@ -209,7 +209,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
             className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
             disabled={isPending || isLocating}
           >
-            {isPending ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
             بحث
           </Button>
         </div>
@@ -217,4 +217,3 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
     </Card>
   );
 }
-
