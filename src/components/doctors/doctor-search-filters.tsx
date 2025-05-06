@@ -15,6 +15,8 @@ interface DoctorSearchFiltersProps {
   wilayas: string[];
 }
 
+const ALL_FILTER_VALUE = '__ALL_ITEMS__';
+
 export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSearchFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,22 +24,26 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
   const { toast } = useToast();
 
   const [name, setName] = useState(searchParams.get('name') || '');
-  const [selectedSpecialty, setSelectedSpecialty] = useState(searchParams.get('specialty') || '');
-  const [selectedWilaya, setSelectedWilaya] = useState(searchParams.get('wilaya') || '');
+  const [selectedSpecialty, setSelectedSpecialty] = useState(searchParams.get('specialty') || ALL_FILTER_VALUE);
+  const [selectedWilaya, setSelectedWilaya] = useState(searchParams.get('wilaya') || ALL_FILTER_VALUE);
   const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     // Pre-fill form if query params exist
     setName(searchParams.get('name') || '');
-    setSelectedSpecialty(searchParams.get('specialty') || '');
-    setSelectedWilaya(searchParams.get('wilaya') || '');
+    setSelectedSpecialty(searchParams.get('specialty') || ALL_FILTER_VALUE);
+    setSelectedWilaya(searchParams.get('wilaya') || ALL_FILTER_VALUE);
   }, [searchParams]);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (name) params.set('name', name);
-    if (selectedSpecialty) params.set('specialty', selectedSpecialty);
-    if (selectedWilaya) params.set('wilaya', selectedWilaya);
+    if (selectedSpecialty && selectedSpecialty !== ALL_FILTER_VALUE) {
+      params.set('specialty', selectedSpecialty);
+    }
+    if (selectedWilaya && selectedWilaya !== ALL_FILTER_VALUE) {
+      params.set('wilaya', selectedWilaya);
+    }
     
     startTransition(() => {
       router.push(`/appointments?${params.toString()}`);
@@ -46,8 +52,8 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
 
   const handleResetFilters = () => {
     setName('');
-    setSelectedSpecialty('');
-    setSelectedWilaya('');
+    setSelectedSpecialty(ALL_FILTER_VALUE);
+    setSelectedWilaya(ALL_FILTER_VALUE);
     startTransition(() => {
       router.push('/appointments');
     });
@@ -72,9 +78,11 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
         params.set('lng', longitude.toString());
         // Keep other filters if they are set
         if (name) params.set('name', name);
-        if (selectedSpecialty) params.set('specialty', selectedSpecialty);
+        if (selectedSpecialty && selectedSpecialty !== ALL_FILTER_VALUE) {
+          params.set('specialty', selectedSpecialty);
+        }
         // Wilaya might be less relevant with geo-search but can be kept if desired
-        // if (selectedWilaya) params.set('wilaya', selectedWilaya);
+        // if (selectedWilaya && selectedWilaya !== ALL_FILTER_VALUE) params.set('wilaya', selectedWilaya);
 
         startTransition(() => {
           router.push(`/appointments?${params.toString()}`);
@@ -142,7 +150,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
                 <SelectValue placeholder="اختر التخصص" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value={ALL_FILTER_VALUE}>الكل</SelectItem>
                 {specialties.map((spec) => (
                   <SelectItem key={spec} value={spec} className="text-right">
                     {spec}
@@ -162,7 +170,7 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
                 <SelectValue placeholder="اختر الولاية" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">الكل</SelectItem>
+                <SelectItem value={ALL_FILTER_VALUE}>الكل</SelectItem>
                 {wilayas.map((wil) => (
                   <SelectItem key={wil} value={wil} className="text-right">
                     {wil}
@@ -209,3 +217,4 @@ export default function DoctorSearchFilters({ specialties, wilayas }: DoctorSear
     </Card>
   );
 }
+
