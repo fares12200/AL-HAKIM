@@ -143,7 +143,7 @@ export default function DoctorProfilePage() {
         skills: data.skills,
         equipment: data.equipment,
         imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`, // Default if empty
-        rating: data.rating,
+        rating: data.rating !== undefined ? Number(data.rating) : 4.0,
         updatedAt: new Date().toISOString(),
       };
       
@@ -422,13 +422,13 @@ export default function DoctorProfilePage() {
                   <FormControl>
                     <div className="flex items-center gap-4">
                        <Slider
-                        defaultValue={[field.value ?? 4]}
+                        value={[field.value ?? 4.0]}
                         max={5}
                         step={0.1}
                         onValueChange={(value) => field.onChange(value[0])}
                         className="w-[calc(100%-4rem)]"
                       />
-                      <span className="text-lg font-semibold w-16 text-center">{field.value?.toFixed(1)}</span>
+                      <span className="text-lg font-semibold w-16 text-center">{(field.value ?? 4.0).toFixed(1)}</span>
                     </div>
                   </FormControl>
                    <FormDescription>هذا الحقل لأغراض العرض والتجربة. في تطبيق حقيقي، يتم حسابه بناءً على تقييمات المرضى.</FormDescription>
@@ -456,3 +456,4 @@ export default function DoctorProfilePage() {
     </Card>
   );
 }
+

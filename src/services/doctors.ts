@@ -89,118 +89,8 @@ const mockCoordinates: { [key: string]: { lat: number; lng: number } } = {
   "Sétif, Ain Fouara": { lat: 36.1900, lng: 5.4091 },
 };
 
-// Initial mock doctors data. In a real app, this would be fetched from Firestore.
-// The doctor's 'id' should correspond to their Firebase Auth UID.
-const initialMockDoctors: Doctor[] = [
-    {
-      id: 'mock-doc-1', // Example UID
-      name: 'د. أحمد الهاشمي',
-      specialty: 'أمراض القلب والشرايين',
-      location: 'الجزائر العاصمة، باب الزوار',
-      wilaya: 'Alger',
-      coordinates: mockCoordinates["Alger, Centre"],
-      imageUrl: 'https://picsum.photos/seed/ahmed/300/300',
-      bio: 'استشاري أمراض القلب بخبرة تتجاوز 15 عامًا في التشخيص وعلاج أمراض القلب المختلفة.',
-      availableSlots: ['09:00 ص', '10:00 ص', '11:30 ص', '02:00 م'],
-      phoneNumber: '021xxxxxx',
-      experience: '15+ سنة خبرة، عمل سابق في مستشفى مصطفى باشا.',
-      skills: 'قسطرة قلبية, تركيب دعامات, تخطيط صدى القلب',
-      equipment: 'جهاز تخطيط القلب (ECG), جهاز صدى القلب (ECHO)',
-      rating: 4.8,
-    },
-    {
-      id: 'mock-doc-2', // Example UID
-      name: 'د. فاطمة الزهراء',
-      specialty: 'الأمراض الجلدية والتناسلية',
-      location: 'وهران، حي السلام',
-      wilaya: 'Oran',
-      coordinates: mockCoordinates["Oran, Sidi El Houari"],
-      imageUrl: 'https://picsum.photos/seed/fatima/300/300',
-      bio: 'أخصائية أمراض جلدية وتجميل، متخصصة في علاج مشاكل البشرة والشعر بأحدث التقنيات.',
-      availableSlots: ['10:30 ص', '11:00 ص', '01:00 م', '03:30 م'],
-      phoneNumber: '041xxxxxx',
-      experience: '10 سنوات خبرة في مجال الجلدية والتجميل.',
-      skills: 'علاج حب الشباب, إزالة الشعر بالليزر, حقن الفيلر والبوتكس',
-      equipment: 'جهاز ليزر لإزالة الشعر, جهاز ديرمابن',
-      rating: 4.5,
-    },
-    {
-      id: 'mock-doc-3',
-      name: 'د. خالد الأنصاري',
-      specialty: 'طب الأطفال وحديثي الولادة',
-      location: 'قسنطينة، حي الأمير عبد القادر',
-      wilaya: 'Constantine',
-      coordinates: mockCoordinates["Constantine, Kasbah"],
-      imageUrl: 'https://picsum.photos/seed/khalid/300/300',
-      bio: 'طبيب أطفال متخصص في رعاية صحة الأطفال منذ الولادة وحتى سن المراهقة.',
-      availableSlots: ['09:30 ص', '10:30 ص', '12:00 م', '02:30 م', '04:00 م'],
-      experience: '8 سنوات خبرة في متابعة نمو الأطفال وعلاج أمراض الطفولة الشائعة.',
-      skills: 'تطعيمات الأطفال, متابعة النمو والتطور, علاج حساسية الأطفال',
-      equipment: 'ميزان أطفال دقيق, جهاز قياس الصفراء',
-      rating: 4.7,
-    },
-    {
-      id: 'mock-doc-4',
-      name: 'د. سارة القحطاني',
-      specialty: 'الطب الباطني والجهاز الهضمي',
-      location: 'عنابة، وسط المدينة',
-      wilaya: 'Annaba',
-      coordinates: mockCoordinates["Annaba, Cours de la Révolution"],
-      imageUrl: 'https://picsum.photos/seed/sara/300/300',
-      bio: 'استشارية طب باطني وجهاز هضمي، تقدم تشخيصًا وعلاجًا لمختلف الأمراض الباطنية.',
-      availableSlots: ['09:00 ص', '11:00 ص', '01:30 م'],
-      phoneNumber: '031xxxxxx',
-      experience: '12 سنة خبرة، متخصصة في أمراض المعدة والقولون.',
-      skills: 'تنظير المعدة والقولون, علاج ارتجاع المريء, متابعة مرضى السكري',
-      equipment: 'جهاز منظار داخلي, جهاز قياس سكر الدم',
-      rating: 4.2,
-    },
-     {
-      id: 'mock-doc-5',
-      name: 'د. يوسف الحمدان',
-      specialty: 'طب وجراحة العيون',
-      location: 'سطيف، حي النصر',
-      wilaya: 'Sétif',
-      coordinates: mockCoordinates["Sétif, Ain Fouara"],
-      imageUrl: 'https://picsum.photos/seed/youssef/300/300',
-      bio: 'جراح عيون متخصص في تصحيح النظر وعلاج أمراض العيون المختلفة.',
-      availableSlots: ['10:00 ص', '12:30 م', '03:00 م', '04:30 م'],
-      experience: 'خبرة 20 عاماً في جراحات العيون بالليزر والماء الأبيض.',
-      skills: 'جراحة الماء الأبيض (الكاتاراكت), تصحيح النظر بالليزك, علاج الجلوكوما',
-      equipment: 'جهاز فحص قاع العين, جهاز قياس ضغط العين',
-      rating: 4.9,
-    },
-    {
-      id: 'mock-doc-6',
-      name: 'د. ليلى بناني',
-      specialty: 'أمراض النساء والتوليد',
-      location: 'البليدة، وسط المدينة',
-      wilaya: 'Blida',
-      coordinates: { lat: 36.4707, lng: 2.8276 }, 
-      imageUrl: 'https://picsum.photos/seed/leila/300/300',
-      bio: 'طبيبة نساء وتوليد بخبرة واسعة في متابعة الحمل والولادة.',
-      availableSlots: ['08:00 ص', '09:30 ص', '11:00 م'],
-      experience: '14 سنة خبرة في متابعة حالات الحمل عالية الخطورة وإجراء الولادات.',
-      skills: 'متابعة الحمل, ولادة طبيعية وقيصرية, تركيب اللولب الهرموني',
-      equipment: 'جهاز سونار (إيكوغرافيا), جهاز تخطيط قلب الجنين',
-      rating: 4.6,
-    },
-    {
-      id: 'mock-doc-7',
-      name: 'د. علي منصوري',
-      specialty: 'أمراض القلب والشرايين',
-      location: 'تيزي وزو، المدينة الجديدة',
-      wilaya: 'Tizi Ouzou',
-      coordinates: { lat: 36.7118, lng: 4.0459 },
-      imageUrl: 'https://picsum.photos/seed/ali/300/300',
-      bio: 'استشاري قلب متخصص في القسطرة القلبية وعلاج ارتفاع ضغط الدم.',
-      availableSlots: ['10:00 ص', '11:00 ص', '02:30 م', '03:30 م'],
-      experience: 'استشاري وخبرة 18 عاماً.',
-      skills: 'قسطرة تشخيصية وعلاجية, علاج اضطرابات نظم القلب.',
-      equipment: 'جهاز هولتر لمراقبة نظم القلب, جهاز اختبار الجهد.',
-      rating: 4.7,
-    }
-];
+// Initial mock doctors data is now empty. All doctors will be sourced from the mock DB.
+const initialMockDoctors: Doctor[] = [];
 
 
 /**
@@ -243,7 +133,7 @@ export async function getDoctors(): Promise<Doctor[]> {
           experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
           skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
           equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
-          rating: userData.rating || initialDoctorData?.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1), // Mock rating if not present
+          rating: userData.rating !== undefined ? Number(userData.rating) : (initialDoctorData?.rating !== undefined ? Number(initialDoctorData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1))),
         });
       }
     }
@@ -256,7 +146,7 @@ export async function getDoctors(): Promise<Doctor[]> {
     if (!combinedDoctors.find(dbDoc => dbDoc.id === initialDoc.id)) {
       combinedDoctors.push({
         ...initialDoc,
-        rating: initialDoc.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1) // Ensure rating for initial mocks too
+        rating: initialDoc.rating !== undefined ? Number(initialDoc.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)) // Ensure rating for initial mocks too
       });
     }
   });
@@ -292,7 +182,7 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
         experience: userData.experience || initialDoctorData?.experience || 'غير محدد',
         skills: userData.skills || initialDoctorData?.skills || 'غير محدد',
         equipment: userData.equipment || initialDoctorData?.equipment || 'غير محدد',
-        rating: userData.rating || initialDoctorData?.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1), // Mock rating if not present
+        rating: userData.rating !== undefined ? Number(userData.rating) : (initialDoctorData?.rating !== undefined ? Number(initialDoctorData.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1))),
       };
     }
   }
@@ -301,7 +191,7 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
   if (initialDoctor) {
     return {
       ...initialDoctor,
-      rating: initialDoctor.rating || (Math.random() * (5 - 3.5) + 3.5).toFixed(1) // Ensure rating for initial mocks too
+      rating: initialDoctor.rating !== undefined ? Number(initialDoctor.rating) : parseFloat((Math.random() * (5 - 3.5) + 3.5).toFixed(1)) // Ensure rating for initial mocks too
     };
   }
   
@@ -375,7 +265,7 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
       ...data, // New data from profile form
       role: 'doctor', // Ensure role is doctor
       updatedAt: new Date().toISOString(),
-      rating: existingData.rating || data.rating || (Math.random() * (5-3.5) + 3.5).toFixed(1) // Preserve or mock rating
+      rating: data.rating !== undefined ? Number(data.rating) : (existingData.rating !== undefined ? Number(existingData.rating) : parseFloat((Math.random() * (5-3.5) + 3.5).toFixed(1))) // Preserve or mock rating
     };
     await db.setDoc(userDocPath, updatedData);
 
@@ -401,7 +291,8 @@ export async function updateDoctorProfileInMock(uid: string, data: Partial<Docto
              experience: updatedData.experience,
              skills: updatedData.skills,
              equipment: updatedData.equipment,
-             rating: updatedData.rating,
+             rating: updatedData.rating !== undefined ? Number(updatedData.rating) : parseFloat((Math.random() * (5-3.5) + 3.5).toFixed(1)),
         });
     }
 }
+
