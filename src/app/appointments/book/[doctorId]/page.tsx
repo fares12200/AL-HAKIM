@@ -2,7 +2,8 @@ import { getDoctor, type Doctor } from '@/services/doctors';
 import BookingForm from '@/components/appointments/booking-form';
 import Image from 'next/image';
 import { Stethoscope, MapPin, Briefcase, AlertTriangle } from 'lucide-react';
-import type { Metadata, ResolvingMetadata } from 'next'
+import type { Metadata, ResolvingMetadata } from 'next';
+import { Button } from '@/components/ui/button'; // Assuming this is the intended Button component
 
 type Props = {
   params: { doctorId: string }
@@ -50,7 +51,7 @@ export default async function BookAppointmentPage({ params }: { params: { doctor
           <div className="bg-card p-6 rounded-lg shadow-xl text-center">
             <div className="relative w-40 h-40 mx-auto mb-6 rounded-full overflow-hidden border-4 border-primary shadow-md">
               <Image
-                src={doctor.imageUrl}
+                src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`}
                 alt={`صورة ${doctor.name}`}
                 layout="fill"
                 objectFit="cover"

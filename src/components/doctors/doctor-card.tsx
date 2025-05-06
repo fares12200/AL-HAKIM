@@ -1,20 +1,34 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Doctor } from '@/services/doctors';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Stethoscope, MapPin, Briefcase, Globe } from 'lucide-react';
+import { Stethoscope, MapPin, Briefcase, Globe, Sparkles, Brain, Settings2, Info } from 'lucide-react';
 
 interface DoctorCardProps {
   doctor: Doctor;
 }
+
+const DetailItem: React.FC<{ icon: React.ElementType; label: string; value?: string }> = ({ icon: Icon, label, value }) => {
+  if (!value || value.trim() === '' || value.trim().toLowerCase() === 'غير محدد') return null;
+  return (
+    <div className="flex items-start gap-2 text-sm">
+      <Icon size={16} className="text-accent mt-0.5 shrink-0" />
+      <div>
+        <strong className="font-medium">{label}:</strong>
+        <p className="text-foreground/80 leading-relaxed">{value}</p>
+      </div>
+    </div>
+  );
+};
+
 
 export default function DoctorCard({ doctor }: DoctorCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 h-full">
       <CardHeader className="p-0 relative h-56">
         <Image
-          src={doctor.imageUrl}
+          src={doctor.imageUrl || `https://picsum.photos/seed/${doctor.id.substring(0,10)}/300/300`}
           alt={`صورة ${doctor.name}`}
           layout="fill"
           objectFit="cover"
@@ -24,20 +38,24 @@ export default function DoctorCard({ doctor }: DoctorCardProps) {
       </CardHeader>
       <CardContent className="p-6 flex-grow">
         <CardTitle className="text-2xl font-bold mb-3 text-primary">{doctor.name}</CardTitle>
-        <div className="space-y-3 text-foreground/80">
-          <div className="flex items-center gap-2">
-            <Briefcase size={18} className="text-accent" />
-            <p>{doctor.specialty}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin size={18} className="text-accent" />
-            <p>{doctor.location}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Globe size={18} className="text-accent" />
-            <p>ولاية: {doctor.wilaya}</p>
-          </div>
-          <p className="text-sm text-foreground/70 line-clamp-3 pt-2 border-t border-border/50">{doctor.bio}</p>
+        <div className="space-y-3">
+          <DetailItem icon={Briefcase} label="التخصص" value={doctor.specialty} />
+          <DetailItem icon={MapPin} label="عنوان العيادة" value={doctor.location} />
+          <DetailItem icon={Globe} label="الولاية" value={doctor.wilaya} />
+          
+          {doctor.bio && doctor.bio.trim() !== '' && doctor.bio.trim().toLowerCase() !== 'لا توجد نبذة تعريفية.' && (
+             <div className="pt-2 mt-2 border-t border-border/50">
+                <DetailItem icon={Info} label="نبذة تعريفية" value={doctor.bio} />
+            </div>
+          )}
+
+          {(doctor.experience || doctor.skills || doctor.equipment) && (
+            <div className="pt-3 mt-3 border-t border-border/50 space-y-3">
+                <DetailItem icon={Sparkles} label="الخبرة" value={doctor.experience} />
+                <DetailItem icon={Brain} label="المهارات والإجراءات" value={doctor.skills} />
+                <DetailItem icon={Settings2} label="المعدات والتجهيزات" value={doctor.equipment} />
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="p-6 border-t mt-auto">

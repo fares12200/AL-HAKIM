@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,9 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon } from 'lucide-react';
+import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2 } from 'lucide-react';
 import { db } from '@/lib/firebase'; // For Firestore operations
-import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties } from '@/services/doctors'; // For dropdowns
+import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfileInMock, type Doctor } from '@/services/doctors'; // For dropdowns and mock update
+import Image from 'next/image';
+import { Label } from '@/components/ui/label';
 
 // Schema for doctor profile
 const doctorProfileSchema = z.object({
@@ -27,16 +28,13 @@ const doctorProfileSchema = z.object({
   location: z.string().min(5, { message: "يرجى إدخال عنوان العيادة (5 أحرف على الأقل)."}),
   bio: z.string().max(1000, "السيرة الذاتية يجب ألا تتجاوز 1000 حرف.").optional(),
   phoneNumber: z.string().optional(),
-  // availableSlots: z.array(z.string()).optional(), // For managing working hours/slots - more complex UI needed
+  experience: z.string().max(500, "وصف الخبرة يجب ألا يتجاوز 500 حرف.").optional(),
+  skills: z.string().max(500, "المهارات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
+  equipment: z.string().max(500, "المعدات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
+  imageUrl: z.string().url({ message: "الرجاء إدخال رابط صورة صحيح أو تركه فارغًا." }).optional().or(z.literal('')),
 });
 
 type DoctorProfileFormValues = z.infer<typeof doctorProfileSchema>;
-
-interface DoctorProfileData extends DoctorProfileFormValues {
-  updatedAt?: string; // ISO string
-  imageUrl?: string; // Assuming image URL is managed separately or part of this doc
-  coordinates?: { lat: number; lng: number }; // From services/doctors
-}
 
 
 export default function DoctorProfilePage() {
@@ -47,6 +45,7 @@ export default function DoctorProfilePage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [algerianWilayas, setAlgerianWilayas] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
 
   const form = useForm<DoctorProfileFormValues>({
@@ -59,6 +58,10 @@ export default function DoctorProfilePage() {
       location: '',
       bio: '',
       phoneNumber: '',
+      experience: '',
+      skills: '',
+      equipment: '',
+      imageUrl: '',
     },
   });
 
@@ -74,17 +77,14 @@ export default function DoctorProfilePage() {
     } else if (!authLoading && user && user.role !== 'doctor') {
       router.push('/auth/login?message=Access denied.');
     } else if (user) {
-      // Fetch existing profile data
       const fetchProfile = async () => {
         setIsLoadingData(true);
         try {
-          // Doctor-specific data might be in 'doctors' collection or 'users' with a role.
-          // For simplicity, let's assume 'users' collection holds this extended profile.
           const userDocRefPath = `users/${user.uid}`; 
           const userDoc = await db.getDoc(userDocRefPath);
           
           if (userDoc.exists()) {
-            const data = userDoc.data() as any; // Cast as DoctorProfileData
+            const data = userDoc.data() as Partial<Doctor> & { name?: string }; // Cast as DoctorProfileData
             form.reset({
               displayName: data.name || user.displayName || '',
               email: data.email || user.email || '',
@@ -93,13 +93,19 @@ export default function DoctorProfilePage() {
               location: data.location || '',
               bio: data.bio || '',
               phoneNumber: data.phoneNumber || '',
+              experience: data.experience || '',
+              skills: data.skills || '',
+              equipment: data.equipment || '',
+              imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
             });
+            setImagePreview(data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
           } else {
-             // Fallback if no Firestore doc for some reason
              form.reset({
                 displayName: user.displayName || '',
                 email: user.email || '',
+                imageUrl: `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
              });
+             setImagePreview(`https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
           }
         } catch (error) {
           console.error("Error fetching doctor profile:", error);
@@ -120,23 +126,22 @@ export default function DoctorProfilePage() {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      const userDocRefPath = `users/${user.uid}`;
-      // In a real app, also update the 'doctors' collection if it's separate
-      // For the mock, we store extended info in the 'users' doc.
-      await db.setDoc(userDocRefPath, {
-        ...(await db.getDoc(userDocRefPath).then(doc => doc.exists() ? doc.data() : {})), // Preserve existing fields like role
-        name: data.displayName, // 'name' is the field for display name in users collection
+      const profileDataToSave: Partial<Doctor> & {name: string, email: string, updatedAt: string} = {
+        name: data.displayName,
         email: data.email,
         specialty: data.specialty,
         wilaya: data.wilaya,
-        location: data.location, // This is the clinic's address string
+        location: data.location,
         bio: data.bio,
         phoneNumber: data.phoneNumber,
-        // Mock: In a real scenario, you'd handle image uploads and coordinates separately or via a service
-        imageUrl: `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`, // Mock image based on UID
-        // coordinates: { lat: 36.7754, lng: 3.0589 }, // Mock coordinates for Alger
+        experience: data.experience,
+        skills: data.skills,
+        equipment: data.equipment,
+        imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`, // Default if empty
         updatedAt: new Date().toISOString(),
-      });
+      };
+      
+      await updateDoctorProfileInMock(user.uid, profileDataToSave);
 
       toast({
         title: "تم تحديث الملف المهني",
@@ -155,6 +160,28 @@ export default function DoctorProfilePage() {
       setIsSubmitting(false);
     }
   };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        form.setValue('imageUrl', dataUri); // This will be a data URI
+        setImagePreview(dataUri);
+        toast({ title: "تنبيه", description: "الصورة المرفوعة هي Data URI. في تطبيق حقيقي، يتم رفعها لسيرفر."});
+      };
+      reader.readAsDataURL(file);
+    } else { // If user clears selection or provides URL via text input
+        const urlValue = form.getValues('imageUrl');
+        if (urlValue && urlValue.startsWith('http')) {
+            setImagePreview(urlValue);
+        } else if (!urlValue) {
+             setImagePreview(`https://picsum.photos/seed/${user?.uid.substring(0,10)}/300/300`);
+        }
+    }
+  };
+
 
   if (authLoading || isLoadingData || !user || user.role !== 'doctor') {
     return (
@@ -175,6 +202,52 @@ export default function DoctorProfilePage() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <div className="flex flex-col items-center space-y-4">
+                <Label htmlFor="profileImage" className="text-md">الصورة الشخصية</Label>
+                <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-primary">
+                {imagePreview ? (
+                    <Image src={imagePreview} alt="معاينة الصورة" layout="fill" objectFit="cover" data-ai-hint="doctor profile" />
+                ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
+                    لا توجد صورة
+                    </div>
+                )}
+                </div>
+                 <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                        <FormItem className="w-full max-w-sm">
+                        <FormLabel className="sr-only">رابط الصورة الشخصية</FormLabel>
+                        <FormControl>
+                            <Input 
+                                type="text" 
+                                placeholder="أو أدخل رابط الصورة هنا" 
+                                {...field} 
+                                onChange={(e) => {
+                                    field.onChange(e); // RHF update
+                                    setImagePreview(e.target.value || `https://picsum.photos/seed/${user?.uid.substring(0,10)}/300/300`);
+                                }}
+                                value={field.value || ''}
+                            />
+                        </FormControl>
+                        <FormDescription>يمكنك رفع صورة أو إدخال رابط صورة عام (مثل Picsum, Unsplash).</FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <Input 
+                    id="profileImageUpload" 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageChange} 
+                    className="text-sm max-w-sm"
+                />
+                <FormDescription className="max-w-sm text-center">أو قم برفع صورة من جهازك (سيتم تحويلها إلى Data URI).</FormDescription>
+
+            </div>
+
+
             <FormField
               control={form.control}
               name="displayName"
@@ -210,7 +283,7 @@ export default function DoctorProfilePage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-md">التخصص الطبي</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="اختر تخصصك" />
@@ -233,7 +306,7 @@ export default function DoctorProfilePage() {
                   <FormItem>
                     <FormLabel className="text-md">رقم هاتف العيادة (اختياري)</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="للتواصل والاستفسارات" {...field} />
+                      <Input type="tel" placeholder="للتواصل والاستفسارات" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -248,7 +321,7 @@ export default function DoctorProfilePage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel className="text-md flex items-center gap-1"><Globe size={16}/> الولاية</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                         <FormControl>
                             <SelectTrigger>
                             <SelectValue placeholder="اختر ولاية العيادة" />
@@ -286,15 +359,55 @@ export default function DoctorProfilePage() {
                 <FormItem>
                   <FormLabel className="text-md">نبذة تعريفية / سيرة ذاتية (اختياري)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="اذكر خبراتك، شهاداتك، أو أي معلومات إضافية تود مشاركتها مع المرضى..." className="min-h-[150px]" {...field} />
+                    <Textarea placeholder="اذكر خبراتك، شهاداتك، أو أي معلومات إضافية تود مشاركتها مع المرضى..." className="min-h-[150px]" {...field} value={field.value || ''}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            {/* Add fields for working hours, image upload etc. later */}
 
+            <FormField
+              control={form.control}
+              name="experience"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-md flex items-center gap-1"><Sparkles size={16}/> الخبرة المهنية</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="مثال: 10 سنوات خبرة في مستشفى X، متخصص في Y..." className="min-h-[100px]" {...field} value={field.value || ''}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="skills"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-md flex items-center gap-1"><Brain size={16}/> المهارات والإجراءات</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="مثال: تخطيط صدى القلب, تركيب دعامات, علاج بالليزر (يفضل فصلها بفاصلة)" className="min-h-[100px]" {...field} value={field.value || ''}/>
+                  </FormControl>
+                  <FormDescription>اذكر المهارات أو الإجراءات الطبية الخاصة التي تقدمها.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="equipment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-md flex items-center gap-1"><Settings2 size={16}/> المعدات والأجهزة الخاصة بالعيادة</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="مثال: جهاز سونار رباعي الأبعاد, جهاز تخطيط دماغ (يفضل فصلها بفاصلة)" className="min-h-[100px]" {...field} value={field.value || ''}/>
+                  </FormControl>
+                  <FormDescription>اذكر أي معدات أو أجهزة متطورة متوفرة في عيادتك.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
