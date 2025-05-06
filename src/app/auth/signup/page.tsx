@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -121,6 +121,7 @@ export default function SignupPage() {
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     className="flex space-x-4 space-x-reverse"
+                    dir="rtl" 
                   >
                     <div className="flex items-center space-x-2 space-x-reverse">
                       <RadioGroupItem value="patient" id="patient" />
@@ -159,9 +160,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-// Helper Controller component for react-hook-form with ShadCN RadioGroup
-// This is often needed if the component doesn't directly integrate.
-// However, ShadCN's RadioGroup seems to work well with onValueChange and defaultValue.
-// So, direct render prop usage is fine.
-import { Controller } from 'react-hook-form';

@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth, type User as FirebaseUser, db } from '@/lib/firebase'; // Using aliased User
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export interface User extends FirebaseUser {
   // Extend with any app-specific user properties if needed in context
@@ -22,25 +22,55 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to set a cookie
+const setCookie = (name: string, value: string, days: number = 7) => {
+  if (typeof document === 'undefined') return; // Ensure this runs only on client
+  let expires = "";
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+};
+
+// Helper function to clear a cookie
+const clearCookie = (name: string) => {
+  if (typeof document === 'undefined') return; // Ensure this runs only on client
+  document.cookie = name + '=; Max-Age=-99999999; path=/';
+};
+
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        // Fetch additional user details (like role) from Firestore
         const userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          setUser({ ...firebaseUser, role: userData.role, displayName: userData.name || firebaseUser.displayName });
+          const fullUser: User = { 
+            ...firebaseUser, 
+            role: userData.role, 
+            displayName: userData.name || firebaseUser.displayName 
+          };
+          setUser(fullUser);
+          setCookie('mockAuthToken', 'true');
+          setCookie('mockUserRole', userData.role || 'patient'); // default to patient if role somehow missing
         } else {
-          // Fallback if no Firestore doc, though signup should create one
-          setUser(firebaseUser as User);
+          // Fallback if no Firestore doc (e.g., admin-created user without profile yet)
+          setUser(firebaseUser as User); // User might not have role yet
+          setCookie('mockAuthToken', 'true');
+          clearCookie('mockUserRole'); // No specific role known
         }
       } else {
         setUser(null);
+        clearCookie('mockAuthToken');
+        clearCookie('mockUserRole');
       }
       setLoading(false);
     });
@@ -56,21 +86,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password, name, role);
       if (userCredential && userCredential.user) {
-        // Store additional user info in Firestore
-        await db.setDoc(`users/${userCredential.user.uid}`, {
+        const newUser = {
           email: userCredential.user.email,
           name: name,
           role: role,
-          createdAt: new Date().toISOString(), // Mock timestamp
-        });
-        // The onAuthStateChanged listener will update the user state
-        // Forcing a refresh or relying on onAuthStateChanged can be tricky with mocks.
-        // Manually setting user state here after signup for immediate feedback in mock.
-        setUser({ uid: userCredential.user.uid, email, displayName: name, role });
+          createdAt: new Date().toISOString(),
+        };
+        await db.setDoc(`users/${userCredential.user.uid}`, newUser);
+        
+        const fullUser: User = { uid: userCredential.user.uid, email, displayName: name, role };
+        setUser(fullUser);
+        setCookie('mockAuthToken', 'true');
+        setCookie('mockUserRole', role);
+
         router.push(role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
       }
     } catch (error) {
       console.error("Sign up error:", error);
+      clearCookie('mockAuthToken');
+      clearCookie('mockUserRole');
       throw error;
     } finally {
       setLoading(false);
@@ -86,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
        if (userCredential && userCredential.user) {
         const userDoc = await db.getDoc(`users/${userCredential.user.uid}`);
-        let role: 'patient' | 'doctor' = 'patient'; // Default role
+        let role: 'patient' | 'doctor' = 'patient'; 
         let displayName = userCredential.user.displayName;
 
         if (userDoc.exists()) {
@@ -94,11 +128,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role = userData.role || 'patient';
           displayName = userData.name || userCredential.user.displayName;
         }
-         setUser({ ...userCredential.user, role, displayName });
+         const fullUser: User = { ...userCredential.user, role, displayName };
+         setUser(fullUser);
+         setCookie('mockAuthToken', 'true');
+         setCookie('mockUserRole', role);
          router.push(role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
       }
     } catch (error) {
       console.error("Log in error:", error);
+      clearCookie('mockAuthToken');
+      clearCookie('mockUserRole');
       throw error;
     } finally {
       setLoading(false);
@@ -110,9 +149,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await auth.signOut();
       setUser(null);
+      clearCookie('mockAuthToken');
+      clearCookie('mockUserRole');
       router.push('/');
     } catch (error) {
       console.error("Log out error:", error);
+      // Cookies might still be there if signOut fails, attempt to clear
+      clearCookie('mockAuthToken');
+      clearCookie('mockUserRole');
       throw error;
     } finally {
       setLoading(false);
@@ -142,3 +186,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
