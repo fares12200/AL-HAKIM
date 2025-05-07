@@ -1,3 +1,4 @@
+
 // This is a mock Firebase service.
 // In a real application, you would use the Firebase SDK here.
 // e.g., import { initializeApp } from 'firebase/app';
@@ -25,11 +26,12 @@ export const auth = {
     if (!email || !password || !name || !role) {
       throw new Error('Mock Auth: Email, password, name, and role are required for signup.');
     }
-    if (Object.values(mockUsers).find(u => u.email === email)) {
+    if (Object.values(mockUsers).find(u => u.email?.toLowerCase() === email.toLowerCase())) {
       throw new Error('Mock Auth: Email already in use.');
     }
     const uid = `mock-uid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const photoURL = `https://picsum.photos/seed/${uid.substring(0,10)}/200/200`;
+    // Store email as provided, comparison will handle case-insensitivity
     const newUser: User & { password?: string } = { uid, email, displayName: name, role, password, photoURL };
     mockUsers[uid] = newUser;
     // Store initial details in mockUserDetails as well, as this is what db.getDoc uses
@@ -53,13 +55,19 @@ export const auth = {
     if (!email || !password) {
       throw new Error('Mock Auth: Email and password are required for signin.');
     }
-    const foundUserInAuth = Object.values(mockUsers).find(u => u.email === email && u.password === password);
+    
+    const normalizedLoginEmail = email.toLowerCase();
+
+    const foundUserInAuth = Object.values(mockUsers).find(u => 
+      u.email?.toLowerCase() === normalizedLoginEmail && u.password === password
+    );
+
     if (foundUserInAuth) {
       // Fetch more details from mockUserDetails (which simulates Firestore)
       const userDetails = mockUserDetails[foundUserInAuth.uid] || {};
       currentUser = { 
         uid: foundUserInAuth.uid, 
-        email: foundUserInAuth.email, 
+        email: foundUserInAuth.email, // Use original email casing for the User object
         displayName: userDetails.name || foundUserInAuth.displayName, // Prefer name from DB
         role: userDetails.role || foundUserInAuth.role, // Prefer role from DB
         photoURL: userDetails.photoURL || foundUserInAuth.photoURL, // Prefer photoURL from DB
@@ -139,14 +147,29 @@ export const db = {
     // If the user exists in auth, update their relevant details (like role, displayName, photoURL) there too for consistency
     // This is to simulate that Firestore is the source of truth for these details after initial creation
     if (mockUsers[id]) {
+      // Only update specific fields, do not touch password
       if (data.role) mockUsers[id].role = data.role;
-      if (data.name) mockUsers[id].displayName = data.name; // Assuming 'name' from DB maps to 'displayName' in User
+      if (data.name) mockUsers[id].displayName = data.name; 
       if (data.photoURL) mockUsers[id].photoURL = data.photoURL;
+      if (data.email && mockUsers[id].email !== data.email) { // If email is being changed
+         // Check if new email is already in use by another user in mockUsers
+        if (Object.values(mockUsers).some(u => u.uid !== id && u.email?.toLowerCase() === data.email.toLowerCase())) {
+            console.warn(`[Mock Firestore] Email ${data.email} is already in use by another user. Update for user ${id} aborted for email field in mockUsers.`);
+        } else {
+            mockUsers[id].email = data.email;
+        }
+      }
       
       if (currentUser?.uid === id) { // If the modified user is the currently logged-in user
         if (data.role) currentUser.role = data.role;
         if (data.name) currentUser.displayName = data.name;
         if (data.photoURL) currentUser.photoURL = data.photoURL;
+        if (data.email && currentUser.email !== data.email) {
+           // Check for email conflict before updating current user's email
+           if (!Object.values(mockUsers).some(u => u.uid !== id && u.email?.toLowerCase() === data.email.toLowerCase())) {
+             currentUser.email = data.email;
+           }
+        }
         notifyAuthStateChanged(); // Notify if current user's data changed
       }
     }

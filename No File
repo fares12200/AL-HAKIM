@@ -1,0 +1,1 @@
+I'm adjusting the email comparison in `signInWithEmailAndPassword` to be case-insensitive, specifically in the mock authentication. This should resolve authentication failures stemming from email casing differences.
