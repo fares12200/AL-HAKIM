@@ -13,25 +13,24 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2, Star } from 'lucide-react';
-import { db } from '@/lib/firebase'; // For Firestore operations
-import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfileInMock, type Doctor } from '@/services/doctors'; // For dropdowns and mock update
+import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2, Star, ImagePlus, Phone, UserSquare2, Palette } from 'lucide-react';
+import { db } from '@/lib/firebase'; 
+import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfileInMock, type Doctor } from '@/services/doctors'; 
 import Image from 'next/image';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
-// Schema for doctor profile
 const doctorProfileSchema = z.object({
-  displayName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل." }),
+  displayName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل." }).max(60, { message: "الاسم طويل جدًا."}),
   email: z.string().email({ message: "البريد الإلكتروني غير صالح." }).readonly(),
   specialty: z.string({ required_error: "يرجى اختيار التخصص."}).min(1, "يرجى اختيار التخصص."),
   wilaya: z.string({ required_error: "يرجى اختيار الولاية."}).min(1, "يرجى اختيار الولاية."),
-  location: z.string().min(5, { message: "يرجى إدخال عنوان العيادة (5 أحرف على الأقل)."}),
-  bio: z.string().max(1000, "السيرة الذاتية يجب ألا تتجاوز 1000 حرف.").optional(),
-  phoneNumber: z.string().optional(),
-  experience: z.string().max(500, "وصف الخبرة يجب ألا يتجاوز 500 حرف.").optional(),
-  skills: z.string().max(500, "المهارات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
-  equipment: z.string().max(500, "المعدات يجب ألا تتجاوز 500 حرف.").optional(), // Could be comma-separated
+  location: z.string().min(5, { message: "يرجى إدخال عنوان العيادة (5 أحرف على الأقل)."}).max(150, {message: "العنوان طويل جدًا."}),
+  bio: z.string().max(1500, "السيرة الذاتية يجب ألا تتجاوز 1500 حرف.").optional(),
+  phoneNumber: z.string().regex(/^0[5-7][0-9]{8}$/, {message: "رقم الهاتف غير صالح (يجب أن يبدأ بـ 05، 06، أو 07 ويحتوي على 10 أرقام)."}).optional().or(z.literal('')),
+  experience: z.string().max(700, "وصف الخبرة يجب ألا يتجاوز 700 حرف.").optional(),
+  skills: z.string().max(700, "المهارات يجب ألا تتجاوز 700 حرف.").optional(), 
+  equipment: z.string().max(700, "المعدات يجب ألا تتجاوز 700 حرف.").optional(), 
   imageUrl: z.string().url({ message: "الرجاء إدخال رابط صورة صحيح أو تركه فارغًا." }).optional().or(z.literal('')),
   rating: z.number().min(0).max(5).optional(),
 });
@@ -64,7 +63,7 @@ export default function DoctorProfilePage() {
       skills: '',
       equipment: '',
       imageUrl: '',
-      rating: 4.0, // Default rating
+      rating: 4.0, 
     },
   });
 
@@ -87,7 +86,7 @@ export default function DoctorProfilePage() {
           const userDoc = await db.getDoc(userDocRefPath);
           
           if (userDoc.exists()) {
-            const data = userDoc.data() as Partial<Doctor> & { name?: string }; // Cast as DoctorProfileData
+            const data = userDoc.data() as Partial<Doctor> & { name?: string }; 
             form.reset({
               displayName: data.name || user.displayName || '',
               email: data.email || user.email || '',
@@ -99,24 +98,24 @@ export default function DoctorProfilePage() {
               experience: data.experience || '',
               skills: data.skills || '',
               equipment: data.equipment || '',
-              imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
-              rating: data.rating === undefined ? 4.0 : Number(data.rating), // Ensure rating is a number
+              imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`,
+              rating: data.rating === undefined ? 4.0 : Number(data.rating),
             });
-            setImagePreview(data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
+            setImagePreview(data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`);
           } else {
              form.reset({
                 displayName: user.displayName || '',
                 email: user.email || '',
-                imageUrl: `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`,
+                imageUrl: `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`,
                 rating: 4.0,
              });
-             setImagePreview(`https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`);
+             setImagePreview(`https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`);
           }
         } catch (error) {
           console.error("Error fetching doctor profile:", error);
           toast({
             title: "خطأ في تحميل البيانات",
-            description: "لم نتمكن من تحميل بيانات ملفك المهني.",
+            description: "لم نتمكن من تحميل بيانات ملفك المهني. يرجى المحاولة مرة أخرى.",
             variant: "destructive",
           });
         } finally {
@@ -142,7 +141,7 @@ export default function DoctorProfilePage() {
         experience: data.experience,
         skills: data.skills,
         equipment: data.equipment,
-        imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/300/300`, // Default if empty
+        imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`,
         rating: data.rating !== undefined ? Number(data.rating) : 4.0,
         updatedAt: new Date().toISOString(),
       };
@@ -150,10 +149,10 @@ export default function DoctorProfilePage() {
       await updateDoctorProfileInMock(user.uid, profileDataToSave);
 
       toast({
-        title: "تم تحديث الملف المهني",
-        description: "تم حفظ بيانات ملفك المهني بنجاح.",
+        title: "تم تحديث الملف المهني بنجاح!",
+        description: "تم حفظ بيانات ملفك المهني وسيتم عرضها للمرضى.",
         variant: "default",
-        className: "bg-green-500 text-white",
+        className: "bg-green-500 text-white border-green-600",
       });
     } catch (error) {
       console.error("Error updating doctor profile:", error);
@@ -173,17 +172,17 @@ export default function DoctorProfilePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUri = reader.result as string;
-        form.setValue('imageUrl', dataUri); // This will be a data URI
+        form.setValue('imageUrl', dataUri); 
         setImagePreview(dataUri);
-        toast({ title: "تنبيه", description: "الصورة المرفوعة هي Data URI. في تطبيق حقيقي، يتم رفعها لسيرفر."});
+        toast({ title: "تنبيه", description: "سيتم استخدام الصورة المرفوعة كـ Data URI. في تطبيق حقيقي، يتم رفعها إلى خادم تخزين.", className: "bg-yellow-500 text-black border-yellow-600"});
       };
       reader.readAsDataURL(file);
-    } else { // If user clears selection or provides URL via text input
+    } else { 
         const urlValue = form.getValues('imageUrl');
         if (urlValue && urlValue.startsWith('http')) {
             setImagePreview(urlValue);
         } else if (!urlValue) {
-             setImagePreview(`https://picsum.photos/seed/${user?.uid.substring(0,10)}/300/300`);
+             setImagePreview(`https://picsum.photos/seed/${user?.uid.substring(0,10)}/400/400`);
         }
     }
   };
@@ -191,151 +190,120 @@ export default function DoctorProfilePage() {
 
   if (authLoading || isLoadingData || !user || user.role !== 'doctor') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-muted-foreground">جاري تحميل بيانات الملف المهني...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-6">
+        <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
+        <p className="ml-4 text-xl text-muted-foreground">جاري تحميل بيانات ملفك المهني...</p>
       </div>
     );
   }
 
   return (
-    <Card className="max-w-3xl mx-auto shadow-xl">
-      <CardHeader className="text-center">
-        <BriefcaseMedical className="mx-auto text-primary mb-4" size={48} />
-        <CardTitle className="text-3xl font-bold text-primary">ملفي المهني</CardTitle>
-        <CardDescription>قم بتحديث معلوماتك المهنية لتظهر للمرضى بشكل صحيح.</CardDescription>
+    <Card className="max-w-4xl mx-auto shadow-xl rounded-xl">
+      <CardHeader className="text-center p-8 border-b">
+        <BriefcaseMedical className="mx-auto text-primary mb-6" size={56} strokeWidth={1.5} />
+        <CardTitle className="text-4xl font-bold text-primary">ملفي المهني</CardTitle>
+        <CardDescription className="text-lg text-muted-foreground mt-2">
+            قم بتحديث معلوماتك المهنية بانتظام لتظهر للمرضى بشكل دقيق واحترافي.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-8">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="flex flex-col items-center space-y-4">
-                <Label htmlFor="profileImage" className="text-md">الصورة الشخصية</Label>
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-primary">
-                {imagePreview ? (
-                    <Image src={imagePreview} alt="معاينة الصورة" layout="fill" objectFit="cover" data-ai-hint="doctor profile" />
-                ) : (
-                    <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
-                    لا توجد صورة
-                    </div>
-                )}
-                </div>
-                 <FormField
-                    control={form.control}
-                    name="imageUrl"
-                    render={({ field }) => (
-                        <FormItem className="w-full max-w-sm">
-                        <FormLabel className="sr-only">رابط الصورة الشخصية</FormLabel>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
+            {/* Image Upload Section */}
+            <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/30">
+                        <FormLabel className="text-xl font-semibold text-primary flex items-center gap-2"><ImagePlus size={24}/> الصورة الشخصية</FormLabel>
+                        <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-primary shadow-md">
+                        {imagePreview ? (
+                            <Image src={imagePreview} alt="معاينة الصورة الشخصية" layout="fill" objectFit="cover" data-ai-hint="doctor profile professional" />
+                        ) : (
+                            <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground text-sm">
+                                لا توجد صورة
+                            </div>
+                        )}
+                        </div>
                         <FormControl>
                             <Input 
                                 type="text" 
-                                placeholder="أو أدخل رابط الصورة هنا" 
+                                placeholder="أو أدخل رابط الصورة هنا (URL)" 
                                 {...field} 
                                 onChange={(e) => {
-                                    field.onChange(e); // RHF update
-                                    setImagePreview(e.target.value || `https://picsum.photos/seed/${user?.uid.substring(0,10)}/300/300`);
+                                    field.onChange(e); 
+                                    setImagePreview(e.target.value || `https://picsum.photos/seed/${user?.uid.substring(0,10)}/400/400`);
                                 }}
                                 value={field.value || ''}
+                                className="max-w-md text-center"
                             />
                         </FormControl>
-                        <FormDescription>يمكنك رفع صورة أو إدخال رابط صورة عام (مثل Picsum, Unsplash).</FormDescription>
+                        <Input 
+                            id="profileImageUpload" 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={handleImageChange} 
+                            className="text-sm max-w-md file:mr-2 file:py-2 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                        />
+                        <FormDescription className="max-w-md text-center text-xs">
+                            يمكنك رفع صورة من جهازك (سيتم تحويلها لـ Data URI) أو إدخال رابط URL لصورة عامة.
+                        </FormDescription>
                         <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <Input 
-                    id="profileImageUpload" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleImageChange} 
-                    className="text-sm max-w-sm"
-                />
-                <FormDescription className="max-w-sm text-center">أو قم برفع صورة من جهازك (سيتم تحويلها إلى Data URI).</FormDescription>
-
-            </div>
-
-
-            <FormField
-              control={form.control}
-              name="displayName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md">الاسم الكامل (كما سيظهر للمرضى)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="مثال: د. اسمك الكامل" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md">البريد الإلكتروني (للاتصال)</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="بريدك الإلكتروني" {...field} readOnly className="bg-muted/50 cursor-not-allowed"/>
-                  </FormControl>
-                  <FormDescription>لا يمكن تغيير البريد الإلكتروني للحساب حالياً.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="specialty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-md">التخصص الطبي</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر تخصصك" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {specialties.map((spec) => (
-                          <SelectItem key={spec} value={spec} className="text-right">{spec}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+                    </FormItem>
                 )}
-              />
-               <FormField
+            />
+            
+            {/* Basic Information Section */}
+            <div className="space-y-6 p-6 border rounded-lg bg-card">
+                 <h3 className="text-xl font-semibold text-primary mb-4 flex items-center gap-2"><UserSquare2 size={24}/> المعلومات الأساسية</h3>
+                <FormField
                 control={form.control}
-                name="phoneNumber"
+                name="displayName"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-md">رقم هاتف العيادة (اختياري)</FormLabel>
+                    <FormItem>
+                    <FormLabel className="text-md">الاسم الكامل (كما سيظهر للمرضى)</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="للتواصل والاستفسارات" {...field} value={field.value || ''} />
+                        <Input placeholder="مثال: د. اسمك الكامل هنا" {...field} className="py-3 text-base"/>
                     </FormControl>
                     <FormMessage />
-                  </FormItem>
+                    </FormItem>
                 )}
-              />
+                />
+                <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md">البريد الإلكتروني (للاتصال)</FormLabel>
+                    <FormControl>
+                        <Input type="email" placeholder="بريدك الإلكتروني المسجل" {...field} readOnly className="bg-muted/50 cursor-not-allowed py-3 text-base"/>
+                    </FormControl>
+                    <FormDescription className="text-xs">لا يمكن تغيير البريد الإلكتروني للحساب حالياً من هنا.</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-                 <FormField
+            {/* Professional Details Section */}
+             <div className="space-y-6 p-6 border rounded-lg bg-card">
+                 <h3 className="text-xl font-semibold text-primary mb-4 flex items-center gap-2"><BriefcaseMedical size={24}/> التفاصيل المهنية</h3>
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-8">
+                <FormField
                     control={form.control}
-                    name="wilaya"
+                    name="specialty"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-md flex items-center gap-1"><Globe size={16}/> الولاية</FormLabel>
+                        <FormLabel className="text-md">التخصص الطبي</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                         <FormControl>
-                            <SelectTrigger>
-                            <SelectValue placeholder="اختر ولاية العيادة" />
+                            <SelectTrigger className="py-3 text-base">
+                            <SelectValue placeholder="اختر تخصصك الطبي" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {algerianWilayas.map((wil) => (
-                            <SelectItem key={wil} value={wil} className="text-right">{wil}</SelectItem>
+                            {specialties.map((spec) => (
+                            <SelectItem key={spec} value={spec} className="text-right text-base">{spec}</SelectItem>
                             ))}
                         </SelectContent>
                         </Select>
@@ -345,108 +313,152 @@ export default function DoctorProfilePage() {
                 />
                 <FormField
                     control={form.control}
-                    name="location"
+                    name="phoneNumber"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel className="text-md flex items-center gap-1"><MapPinIcon size={16}/> عنوان العيادة التفصيلي</FormLabel>
+                        <FormLabel className="text-md flex items-center gap-1"><Phone size={16}/> رقم هاتف العيادة (اختياري)</FormLabel>
                         <FormControl>
-                        <Input placeholder="مثال: حي النصر، شارع الاستقلال، رقم 15" {...field} />
+                        <Input type="tel" placeholder="مثال: 0612345678" {...field} value={field.value || ''} className="py-3 text-base"/>
                         </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}
                 />
-            </div>
-           
-            <FormField
-              control={form.control}
-              name="bio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md">نبذة تعريفية / سيرة ذاتية (اختياري)</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="اذكر خبراتك، شهاداتك، أو أي معلومات إضافية تود مشاركتها مع المرضى..." className="min-h-[150px]" {...field} value={field.value || ''}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                </div>
 
-            <FormField
-              control={form.control}
-              name="experience"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md flex items-center gap-1"><Sparkles size={16}/> الخبرة المهنية</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="مثال: 10 سنوات خبرة في مستشفى X، متخصص في Y..." className="min-h-[100px]" {...field} value={field.value || ''}/>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="skills"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md flex items-center gap-1"><Brain size={16}/> المهارات والإجراءات</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="مثال: تخطيط صدى القلب, تركيب دعامات, علاج بالليزر (يفضل فصلها بفاصلة)" className="min-h-[100px]" {...field} value={field.value || ''}/>
-                  </FormControl>
-                  <FormDescription>اذكر المهارات أو الإجراءات الطبية الخاصة التي تقدمها.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="equipment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md flex items-center gap-1"><Settings2 size={16}/> المعدات والأجهزة الخاصة بالعيادة</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="مثال: جهاز سونار رباعي الأبعاد, جهاز تخطيط دماغ (يفضل فصلها بفاصلة)" className="min-h-[100px]" {...field} value={field.value || ''}/>
-                  </FormControl>
-                  <FormDescription>اذكر أي معدات أو أجهزة متطورة متوفرة في عيادتك.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="rating"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-md flex items-center gap-1"><Star size={16}/> التقييم (لأغراض العرض فقط)</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-4">
-                       <Slider
-                        value={[field.value ?? 4.0]}
-                        max={5}
-                        step={0.1}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        className="w-[calc(100%-4rem)]"
-                      />
-                      <span className="text-lg font-semibold w-16 text-center">{(field.value ?? 4.0).toFixed(1)}</span>
-                    </div>
-                  </FormControl>
-                   <FormDescription>هذا الحقل لأغراض العرض والتجربة. في تطبيق حقيقي، يتم حسابه بناءً على تقييمات المرضى.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-8">
+                    <FormField
+                        control={form.control}
+                        name="wilaya"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-md flex items-center gap-1"><Globe size={16}/> ولاية العيادة</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <FormControl>
+                                <SelectTrigger className="py-3 text-base">
+                                <SelectValue placeholder="اختر ولاية موقع العيادة" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {algerianWilayas.map((wil) => (
+                                <SelectItem key={wil} value={wil} className="text-right text-base">{wil}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-md flex items-center gap-1"><MapPinIcon size={16}/> عنوان العيادة التفصيلي</FormLabel>
+                            <FormControl>
+                            <Input placeholder="مثال: حي النصر، شارع الاستقلال، رقم 15، الطابق 2" {...field} className="py-3 text-base"/>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </div>
             
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3" disabled={isSubmitting}>
+                <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md flex items-center gap-1"><Palette size={16}/> نبذة تعريفية / سيرة ذاتية (اختياري)</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="اذكر خبراتك، شهاداتك، فلسفتك في العلاج، أو أي معلومات إضافية تود مشاركتها مع المرضى..." className="min-h-[150px] text-base" {...field} value={field.value || ''}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+
+            {/* Advanced Details Section */}
+             <div className="space-y-6 p-6 border rounded-lg bg-card">
+                 <h3 className="text-xl font-semibold text-primary mb-4 flex items-center gap-2"><Sparkles size={24}/> تفاصيل إضافية</h3>
+                <FormField
+                control={form.control}
+                name="experience"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md flex items-center gap-1"><Sparkles size={16}/> الخبرة المهنية (اختياري)</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="مثال: 10 سنوات خبرة في مستشفى X، متخصص في Y، عملت في Z..." className="min-h-[120px] text-base" {...field} value={field.value || ''}/>
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="skills"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md flex items-center gap-1"><Brain size={16}/> المهارات والإجراءات (اختياري)</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="مثال: تخطيط صدى القلب, تركيب دعامات, علاج بالليزر (يفضل فصلها بفاصلة أو نقاط)" className="min-h-[120px] text-base" {...field} value={field.value || ''}/>
+                    </FormControl>
+                    <FormDescription className="text-xs">اذكر المهارات أو الإجراءات الطبية الخاصة التي تقدمها.</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="equipment"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md flex items-center gap-1"><Settings2 size={16}/> المعدات والأجهزة الخاصة بالعيادة (اختياري)</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="مثال: جهاز سونار رباعي الأبعاد, جهاز تخطيط دماغ, مختبر تحاليل مدمج (يفضل فصلها بفاصلة أو نقاط)" className="min-h-[120px] text-base" {...field} value={field.value || ''}/>
+                    </FormControl>
+                    <FormDescription className="text-xs">اذكر أي معدات أو أجهزة متطورة متوفرة في عيادتك.</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <FormField
+                control={form.control}
+                name="rating"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel className="text-md flex items-center gap-1"><Star size={16}/> التقييم (لأغراض العرض)</FormLabel>
+                    <FormControl>
+                        <div className="flex items-center gap-4 pt-2">
+                        <Slider
+                            value={[field.value ?? 4.0]}
+                            max={5}
+                            step={0.1}
+                            onValueChange={(value) => field.onChange(value[0])}
+                            className="w-[calc(100%-5rem)]"
+                            aria-label="ضبط التقييم"
+                        />
+                        <span className="text-xl font-semibold w-20 text-center p-2 bg-primary/10 text-primary rounded-md">{(field.value ?? 4.0).toFixed(1)}</span>
+                        </div>
+                    </FormControl>
+                    <FormDescription className="text-xs">هذا الحقل لأغراض العرض والتجربة. في تطبيق حقيقي، يتم حسابه تلقائياً بناءً على تقييمات المرضى الفعلية.</FormDescription>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            </div>
+            
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 rounded-lg shadow-md hover:shadow-lg transition-shadow" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  جاري الحفظ...
+                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                  جاري حفظ التغييرات...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-5 w-5" />
-                  حفظ التغييرات
+                  <Save className="mr-2 h-6 w-6" />
+                  حفظ التغييرات في الملف المهني
                 </>
               )}
             </Button>
@@ -456,4 +468,3 @@ export default function DoctorProfilePage() {
     </Card>
   );
 }
-

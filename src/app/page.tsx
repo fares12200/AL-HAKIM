@@ -3,7 +3,7 @@ import DoctorCard from '@/components/doctors/doctor-card';
 import { getDoctors, type Doctor } from '@/services/doctors';
 import Link from 'next/link';
 import Image from 'next/image';
-import { CheckCircle, CalendarCheck, UserCheck, Stethoscope as StethoscopeIcon } from 'lucide-react';
+import { CheckCircle, CalendarCheck, UserCheck, Stethoscope as StethoscopeIcon, HeartHandshake } from 'lucide-react';
 
 
 export default async function HomePage() {
@@ -11,19 +11,20 @@ export default async function HomePage() {
   const featuredDoctors = doctors.slice(0, 3); // Show 3 featured doctors
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-20 md:space-y-24">
       {/* Hero Section */}
-      <section className="text-center py-16 bg-gradient-to-b from-primary/10 to-background rounded-lg shadow-lg">
-        <div className="container mx-auto px-4">
-          <StethoscopeIcon className="mx-auto text-primary mb-6" size={72} />
-          <h1 className="text-5xl font-bold mb-6 text-primary">
+      <section className="text-center py-20 md:py-28 bg-gradient-to-br from-primary/10 via-background to-background rounded-xl shadow-lg overflow-hidden">
+        <div className="container mx-auto px-6">
+          <StethoscopeIcon className="mx-auto text-primary mb-8 animate-pulse" size={80} strokeWidth={1.5}/>
+          <h1 className="text-5xl md:text-6xl font-bold mb-6 text-primary leading-tight">
             أهلاً بك في منصة الحكيم
           </h1>
-          <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto">
-            بوابتك لحجوزات طبية سهلة ومتابعة صحية متكاملة. صحتك تهمنا، وراحتك أولويتنا.
+          <p className="text-lg md:text-xl text-foreground/80 mb-10 max-w-3xl mx-auto leading-relaxed">
+            بوابتك لحجوزات طبية سهلة ومتابعة صحية متكاملة. صحتك تهمنا، وراحتك أولويتنا. اكتشف أفضل الأطباء في منطقتك واحجز موعدك بكل سهولة.
           </p>
           <Link href="/appointments" passHref>
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground px-8 py-3 text-lg">
+            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground px-10 py-7 text-xl rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+              <CalendarCheck size={24} className="mr-3 rtl:ml-3"/>
               احجز موعدك الآن
             </Button>
           </Link>
@@ -32,30 +33,30 @@ export default async function HomePage() {
 
       {/* How It Works Section */}
       <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12 text-primary">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-primary">
             كيف تعمل المنصة؟
           </h2>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div className="p-6 bg-card rounded-lg shadow-md hover:shadow-xl transition-shadow">
-              <CheckCircle className="mx-auto text-accent mb-4" size={48} />
-              <h3 className="text-2xl font-semibold mb-2">ابحث عن طبيبك</h3>
-              <p className="text-foreground/70">
-                تصفح قائمة الأطباء المتخصصين واختر الأنسب لاحتياجاتك.
+          <div className="grid md:grid-cols-3 gap-8 md:gap-10 text-center">
+            <div className="p-8 bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+              <CheckCircle className="mx-auto text-accent mb-6" size={56} strokeWidth={1.5} />
+              <h3 className="text-2xl font-semibold mb-3 text-foreground">ابحث عن طبيبك</h3>
+              <p className="text-foreground/70 leading-relaxed">
+                تصفح قائمة الأطباء المتخصصين، اقرأ تقييماتهم، واختر الأنسب لاحتياجاتك بدقة وسهولة.
               </p>
             </div>
-            <div className="p-6 bg-card rounded-lg shadow-md hover:shadow-xl transition-shadow">
-              <CalendarCheck className="mx-auto text-accent mb-4" size={48} />
-              <h3 className="text-2xl font-semibold mb-2">اختر الموعد</h3>
-              <p className="text-foreground/70">
-                اطلع على المواعيد المتاحة واختر الوقت الذي يناسبك بسهولة.
+            <div className="p-8 bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+              <CalendarCheck className="mx-auto text-accent mb-6" size={56} strokeWidth={1.5} />
+              <h3 className="text-2xl font-semibold mb-3 text-foreground">اختر الموعد</h3>
+              <p className="text-foreground/70 leading-relaxed">
+                اطلع على المواعيد المتاحة للطبيب الذي اخترته واختر الوقت الذي يناسب جدولك بسهولة تامة.
               </p>
             </div>
-            <div className="p-6 bg-card rounded-lg shadow-md hover:shadow-xl transition-shadow">
-              <UserCheck className="mx-auto text-accent mb-4" size={48} />
-              <h3 className="text-2xl font-semibold mb-2">احصل على الرعاية</h3>
-              <p className="text-foreground/70">
-                تمتع بخدمة طبية مميزة ومتابعة صحية مستمرة عبر منصتنا.
+            <div className="p-8 bg-card rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 transform hover:-translate-y-1">
+              <UserCheck className="mx-auto text-accent mb-6" size={56} strokeWidth={1.5} />
+              <h3 className="text-2xl font-semibold mb-3 text-foreground">احصل على الرعاية</h3>
+              <p className="text-foreground/70 leading-relaxed">
+                تمتع بخدمة طبية مميزة، واحصل على متابعة صحية مستمرة وفعالة من خلال منصتنا المتكاملة.
               </p>
             </div>
           </div>
@@ -63,23 +64,23 @@ export default async function HomePage() {
       </section>
 
       {/* Featured Doctors Section */}
-      <section className="py-16 bg-muted/50 rounded-lg">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-12 text-primary">
+      <section className="py-16 bg-muted/40 rounded-xl">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-primary">
             أطباؤنا المميزون
           </h2>
           {featuredDoctors.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
               {featuredDoctors.map((doctor) => (
                 <DoctorCard key={doctor.id} doctor={doctor} />
               ))}
             </div>
           ) : (
-            <p className="text-center text-foreground/70">لا يوجد أطباء مميزون حاليًا.</p>
+            <p className="text-center text-lg text-foreground/70 py-10">لا يوجد أطباء مميزون حاليًا. نعمل على إضافة المزيد قريباً.</p>
           )}
-          <div className="text-center mt-12">
+          <div className="text-center mt-16">
             <Link href="/appointments" passHref>
-              <Button variant="outline" size="lg" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground">
+              <Button variant="outline" size="lg" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground px-10 py-7 text-xl rounded-lg shadow-sm hover:shadow-md transition-all duration-300">
                 عرض جميع الأطباء
               </Button>
             </Link>
@@ -89,13 +90,14 @@ export default async function HomePage() {
 
       {/* Health Monitoring Teaser Section */}
       <section className="py-16 text-center">
-        <div className="container mx-auto px-4">
-           <Image src="https://picsum.photos/800/400?random=1" alt="متابعة صحية" width={800} height={400} className="mx-auto rounded-lg shadow-lg mb-8" data-ai-hint="health monitoring" />
-          <h2 className="text-4xl font-bold mb-6 text-primary">متابعة صحية متكاملة</h2>
-          <p className="text-xl text-foreground/80 mb-8 max-w-2xl mx-auto">
-            نوفر لك أدوات لمتابعة حالتك الصحية والتواصل مع طبيبك بسهولة بعد الموعد. (قريباً)
+        <div className="container mx-auto px-6">
+           <Image src="https://picsum.photos/seed/healthApp/1200/600" alt="متابعة صحية متكاملة" width={1000} height={500} className="mx-auto rounded-xl shadow-xl mb-10 object-cover" data-ai-hint="health app interface" />
+          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-primary">متابعة صحية شاملة ومتكاملة</h2>
+          <p className="text-lg md:text-xl text-foreground/80 mb-10 max-w-3xl mx-auto leading-relaxed">
+            نوفر لك أدوات لمتابعة حالتك الصحية، سجلاتك الطبية، والتواصل مع طبيبك بسهولة بعد الموعد. كل ذلك في مكان واحد وآمن. (قريباً)
           </p>
-          <Button size="lg" variant="secondary" disabled>
+          <Button size="lg" variant="secondary" disabled className="px-10 py-7 text-xl rounded-lg opacity-70 cursor-not-allowed">
+             <HeartHandshake size={24} className="mr-3 rtl:ml-3"/>
             اكتشف المزيد (قريباً)
           </Button>
         </div>

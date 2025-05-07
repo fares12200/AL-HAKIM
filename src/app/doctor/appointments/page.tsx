@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -8,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CalendarCheck, AlertTriangle, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { getAppointments, createAppointment, type Appointment } from '@/services/appointments'; // Assuming these interact with your backend/mock
+import { Loader2, CalendarCheck, AlertTriangle, Trash2, CheckCircle, XCircle, Users, ClockIcon } from 'lucide-react';
+import { getAppointments, createAppointment, type Appointment } from '@/services/appointments'; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +21,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { arSA } from 'date-fns/locale';
 
 
 // This is a mock. In a real app, you'd fetch actual patient names.
@@ -52,134 +53,193 @@ export default function DoctorAppointmentsPage() {
   const fetchAppointments = async (doctorId: string) => {
     setIsLoading(true);
     try {
-      // In a real app, getAppointments would likely take a doctorId parameter
-      // or be a specific endpoint like getAppointmentsByDoctor(doctorId)
       const allAppointments = await getAppointments();
       const doctorAppointments = allAppointments.filter(app => app.doctorId === doctorId);
-      setAppointments(doctorAppointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || a.time.localeCompare(b.time)));
+      setAppointments(doctorAppointments.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time)));
     } catch (error) {
       console.error("Error fetching appointments:", error);
-      toast({ title: "خطأ", description: "لم نتمكن من تحميل المواعيد.", variant: "destructive" });
+      toast({ title: "خطأ", description: "لم نتمكن من تحميل المواعيد. يرجى المحاولة مرة أخرى.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    // Mock cancellation: remove from local state
-    // In a real app, call an API to delete/update the appointment status
     try {
         setAppointments(prev => prev.filter(app => app.id !== appointmentId));
         toast({
-            title: "تم الإلغاء",
-            description: "تم إلغاء الموعد بنجاح.",
+            title: "تم الإلغاء بنجاح",
+            description: "تم إلغاء الموعد وإشعار المريض.",
             variant: "default",
-            className: "bg-orange-500 text-white",
+            className: "bg-orange-500 text-white border-orange-600",
         });
     } catch (error) {
         toast({
-            title: "خطأ",
-            description: "لم نتمكن من إلغاء الموعد.",
+            title: "خطأ في الإلغاء",
+            description: "لم نتمكن من إلغاء الموعد. يرجى المحاولة مرة أخرى.",
             variant: "destructive",
         });
     }
   };
   
-  // Placeholder for confirming/rescheduling - would involve more complex UI/logic
   const handleConfirmAppointment = (appointmentId: string) => {
-    toast({ title: "تم التأكيد", description: `تم تأكيد الموعد ${appointmentId}. (وظيفة تجريبية)` });
+     setAppointments(prev => prev.map(app => app.id === appointmentId ? { ...app, status: 'confirmed' } : app)); // Mock status update
+    toast({ 
+        title: "تم تأكيد الموعد", 
+        description: `تم تأكيد الموعد ${appointmentId} بنجاح.`,
+        variant: "default",
+        className: "bg-green-500 text-white border-green-600",
+    });
   };
 
 
   if (authLoading || isLoading || !user || user.role !== 'doctor') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-muted-foreground">جاري تحميل المواعيد...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-6">
+        <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
+        <p className="ml-4 text-xl text-muted-foreground">جاري تحميل بيانات المواعيد...</p>
       </div>
     );
   }
 
+  const upcomingAppointments = appointments.filter(app => new Date(app.date) >= new Date());
+  const pastAppointments = appointments.filter(app => new Date(app.date) < new Date());
+
+
   return (
-    <Card className="shadow-xl">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <CardTitle className="text-3xl font-bold text-primary flex items-center gap-2">
-                <CalendarCheck size={32} />
-                إدارة المواعيد
-                </CardTitle>
-                <CardDescription>عرض وتأكيد وإلغاء مواعيد مرضاك.</CardDescription>
+    <div className="space-y-8">
+        <Card className="shadow-xl rounded-xl">
+        <CardHeader className="border-b pb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-4">
+                    <CalendarCheck size={40} className="text-primary" strokeWidth={1.5}/>
+                    <div>
+                        <CardTitle className="text-3xl font-bold text-primary">
+                        إدارة المواعيد
+                        </CardTitle>
+                        <CardDescription className="text-lg text-muted-foreground mt-1">عرض وتأكيد وإلغاء مواعيد مرضاك بكل سهولة.</CardDescription>
+                    </div>
+                </div>
+                {/* <Button onClick={() => {}} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg px-6 py-3 text-base">
+                    <PlusCircle size={20} className="mr-2 rtl:ml-2"/>
+                    إضافة موعد يدوي
+                </Button> */}
             </div>
-            {/* <Button onClick={() => {}} className="bg-accent hover:bg-accent/90 text-accent-foreground">إضافة موعد يدوي</Button> */}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {appointments.length === 0 ? (
-          <div className="text-center py-12">
-            <AlertTriangle size={48} className="mx-auto text-muted-foreground mb-4" />
-            <p className="text-xl text-muted-foreground">لا توجد مواعيد محجوزة حالياً.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-right">اسم المريض</TableHead>
-                  <TableHead className="text-right">التاريخ</TableHead>
-                  <TableHead className="text-right">الوقت</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-center">إجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {appointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{mockPatientData[appointment.patientId]?.name || appointment.patientId}</TableCell>
-                    <TableCell>{new Date(appointment.date).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' })}</TableCell>
-                    <TableCell>{appointment.time}</TableCell>
-                    <TableCell>
-                      {/* Mock status - In real app, status would come from DB */}
-                      <Badge variant={new Date(appointment.date) < new Date() ? "secondary" : "default"}>
-                        {new Date(appointment.date) < new Date() ? "منتهي" : "مؤكد"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center space-x-2 space-x-reverse">
-                      <Button variant="ghost" size="sm" className="text-green-600 hover:text-green-700 hover:bg-green-100" onClick={() => handleConfirmAppointment(appointment.id)} title="تأكيد الموعد">
-                        <CheckCircle size={18} />
-                      </Button>
-                       <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                           <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-100" title="إلغاء الموعد">
-                                <Trash2 size={18} />
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>هل أنت متأكد من إلغاء هذا الموعد؟</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                هذا الإجراء لا يمكن التراجع عنه. سيتم إشعار المريض بإلغاء الموعد.
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>تراجع</AlertDialogCancel>
-                            <AlertDialogAction
-                                className="bg-destructive hover:bg-destructive/90"
-                                onClick={() => handleCancelAppointment(appointment.id)}
-                            >
-                                نعم، قم بالإلغاء
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                        </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="p-6">
+            {appointments.length === 0 ? (
+            <div className="text-center py-16">
+                <AlertTriangle size={64} className="mx-auto text-muted-foreground mb-6" strokeWidth={1.5} />
+                <p className="text-2xl font-semibold text-muted-foreground">لا توجد مواعيد محجوزة حالياً.</p>
+                <p className="text-lg text-muted-foreground mt-2">عندما يقوم المرضى بحجز مواعيد، ستظهر هنا.</p>
+            </div>
+            ) : (
+            <div className="space-y-10">
+                {upcomingAppointments.length > 0 && (
+                    <div>
+                        <h2 className="text-2xl font-semibold text-primary mb-4 flex items-center gap-2">
+                            <ClockIcon size={28}/> المواعيد القادمة ({upcomingAppointments.length})
+                        </h2>
+                        <div className="overflow-x-auto rounded-lg border shadow-sm">
+                            <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                <TableHead className="text-right font-semibold text-base py-3">اسم المريض</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">التاريخ</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">الوقت</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">الحالة</TableHead>
+                                <TableHead className="text-center font-semibold text-base py-3">إجراءات</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {upcomingAppointments.map((appointment) => (
+                                <TableRow key={appointment.id} className="hover:bg-muted/30">
+                                    <TableCell className="py-4">{mockPatientData[appointment.patientId]?.name || appointment.patientId}</TableCell>
+                                    <TableCell className="py-4">{format(new Date(appointment.date), 'PPP', { locale: arSA })}</TableCell>
+                                    <TableCell className="py-4">{appointment.time}</TableCell>
+                                    <TableCell className="py-4">
+                                    <Badge variant={(appointment as any).status === 'confirmed' ? "default" : "secondary"} className="text-sm">
+                                        {(appointment as any).status === 'confirmed' ? "مؤكد" : "قيد المراجعة"}
+                                    </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center space-x-1 space-x-reverse py-3">
+                                    {(appointment as any).status !== 'confirmed' && (
+                                        <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700 hover:bg-green-100/50 rounded-full w-9 h-9" onClick={() => handleConfirmAppointment(appointment.id)} title="تأكيد الموعد">
+                                            <CheckCircle size={20} />
+                                        </Button>
+                                    )}
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-red-600 hover:text-red-700 hover:bg-red-100/50 rounded-full w-9 h-9" title="إلغاء الموعد">
+                                                <Trash2 size={20} />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent className="rounded-lg">
+                                            <AlertDialogHeader>
+                                            <AlertDialogTitle className="text-xl">هل أنت متأكد من إلغاء هذا الموعد؟</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-base">
+                                                هذا الإجراء لا يمكن التراجع عنه. سيتم إشعار المريض بإلغاء الموعد فوراً.
+                                            </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter className="mt-4">
+                                            <AlertDialogCancel className="px-6 py-2.5 text-base rounded-md">تراجع</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-6 py-2.5 text-base rounded-md"
+                                                onClick={() => handleCancelAppointment(appointment.id)}
+                                            >
+                                                نعم، قم بالإلغاء
+                                            </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                )}
+
+                {pastAppointments.length > 0 && (
+                     <div>
+                        <h2 className="text-2xl font-semibold text-primary mb-4 flex items-center gap-2">
+                            <Users size={28}/> المواعيد السابقة ({pastAppointments.length})
+                        </h2>
+                        <div className="overflow-x-auto rounded-lg border shadow-sm">
+                            <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/50">
+                                <TableHead className="text-right font-semibold text-base py-3">اسم المريض</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">التاريخ</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">الوقت</TableHead>
+                                <TableHead className="text-right font-semibold text-base py-3">الحالة</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {pastAppointments.map((appointment) => (
+                                <TableRow key={appointment.id} className="hover:bg-muted/30 opacity-70">
+                                    <TableCell className="py-4">{mockPatientData[appointment.patientId]?.name || appointment.patientId}</TableCell>
+                                    <TableCell className="py-4">{format(new Date(appointment.date), 'PPP', { locale: arSA })}</TableCell>
+                                    <TableCell className="py-4">{appointment.time}</TableCell>
+                                    <TableCell className="py-4">
+                                    <Badge variant="outline" className="text-sm border-slate-400 text-slate-500">
+                                        منتهي
+                                    </Badge>
+                                    </TableCell>
+                                </TableRow>
+                                ))}
+                            </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                )}
+
+
+            </div>
+            )}
+        </CardContent>
+        </Card>
+    </div>
   );
 }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -13,25 +12,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserCog, Save } from 'lucide-react';
-import { db } from '@/lib/firebase'; // For Firestore operations
+import { Loader2, UserCog, Save, CalendarDays, Phone } from 'lucide-react';
+import { db } from '@/lib/firebase'; 
 
-// Schema for patient profile - can be expanded
 const patientProfileSchema = z.object({
-  displayName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل." }),
-  email: z.string().email({ message: "البريد الإلكتروني غير صالح." }).readonly(), // Email might be read-only if managed by Firebase Auth directly
-  phoneNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(), // Consider using a date picker and proper date validation
+  displayName: z.string().min(2, { message: "الاسم يجب أن يكون حرفين على الأقل." }).max(50, { message: "الاسم طويل جدًا."}),
+  email: z.string().email({ message: "البريد الإلكتروني غير صالح." }).readonly(), 
+  phoneNumber: z.string().regex(/^0[5-7][0-9]{8}$/, {message: "رقم الهاتف غير صالح (يجب أن يبدأ بـ 05، 06، أو 07 ويحتوي على 10 أرقام)."}).optional().or(z.literal('')),
+  dateOfBirth: z.string().optional().refine((val) => {
+    if (!val) return true; // Optional field
+    const date = new Date(val);
+    return !isNaN(date.getTime()) && date < new Date(); // Must be a valid date and in the past
+  }, { message: "تاريخ الميلاد غير صالح أو في المستقبل."}),
 });
 
 type PatientProfileFormValues = z.infer<typeof patientProfileSchema>;
 
 interface PatientProfileData extends PatientProfileFormValues {
-  updatedAt?: string; // ISO string
+  updatedAt?: string; 
 }
 
 export default function PatientProfilePage() {
-  const { user, loading: authLoading, logOut } = useAuth(); // Assuming logOut is available if needed
+  const { user, loading: authLoading, logOut } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,22 +55,20 @@ export default function PatientProfilePage() {
     } else if (!authLoading && user && user.role !== 'patient') {
       router.push('/auth/login?message=Access denied.');
     } else if (user) {
-      // Fetch existing profile data
       const fetchProfile = async () => {
         setIsLoadingData(true);
         try {
-          const userDocRefPath = `users/${user.uid}`; // Path for user document in 'users' collection
+          const userDocRefPath = `users/${user.uid}`; 
           const userDoc = await db.getDoc(userDocRefPath);
           if (userDoc.exists()) {
-            const data = userDoc.data() as any; // Cast as needed, or define a UserData interface
+            const data = userDoc.data() as any; 
             form.reset({
               displayName: data.name || user.displayName || '',
               email: data.email || user.email || '',
               phoneNumber: data.phoneNumber || '',
-              dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : '', // Format for <input type="date">
+              dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString().split('T')[0] : '', 
             });
           } else {
-            // If no Firestore doc, use auth details
              form.reset({
               displayName: user.displayName || '',
               email: user.email || '',
@@ -78,7 +78,7 @@ export default function PatientProfilePage() {
           console.error("Error fetching patient profile:", error);
           toast({
             title: "خطأ في تحميل البيانات",
-            description: "لم نتمكن من تحميل بيانات ملفك الشخصي.",
+            description: "لم نتمكن من تحميل بيانات ملفك الشخصي. يرجى المحاولة مرة أخرى.",
             variant: "destructive",
           });
         } finally {
@@ -95,23 +95,19 @@ export default function PatientProfilePage() {
     try {
       const userDocRefPath = `users/${user.uid}`;
       await db.setDoc(userDocRefPath, {
-        // Merge with existing data in case there are other fields (like role)
         ...(await db.getDoc(userDocRefPath).then(doc => doc.exists() ? doc.data() : {})),
-        name: data.displayName, // 'name' field in Firestore
-        email: data.email, // Keep email consistent
+        name: data.displayName, 
+        email: data.email, 
         phoneNumber: data.phoneNumber,
         dateOfBirth: data.dateOfBirth,
         updatedAt: new Date().toISOString(),
       });
 
-      // Note: Updating displayName in Firebase Auth is separate if needed.
-      // await updateProfile(auth.currentUser, { displayName: data.displayName });
-
       toast({
-        title: "تم تحديث الملف الشخصي",
-        description: "تم حفظ بيانات ملفك الشخصي بنجاح.",
+        title: "تم تحديث الملف الشخصي بنجاح!",
+        description: "تم حفظ بيانات ملفك الشخصي.",
         variant: "default",
-        className: "bg-green-500 text-white",
+        className: "bg-green-500 text-white border-green-600",
       });
     } catch (error) {
       console.error("Error updating patient profile:", error);
@@ -127,23 +123,25 @@ export default function PatientProfilePage() {
 
   if (authLoading || isLoadingData || !user || user.role !== 'patient') {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-muted-foreground">جاري تحميل بيانات الملف الشخصي...</p>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] p-6">
+        <Loader2 className="h-16 w-16 animate-spin text-primary mb-6" />
+        <p className="ml-4 text-xl text-muted-foreground">جاري تحميل بيانات ملفك الشخصي...</p>
       </div>
     );
   }
 
   return (
-    <Card className="max-w-2xl mx-auto shadow-xl">
-      <CardHeader className="text-center">
-        <UserCog className="mx-auto text-primary mb-4" size={48} />
-        <CardTitle className="text-3xl font-bold text-primary">ملفي الشخصي</CardTitle>
-        <CardDescription>قم بتحديث معلومات حسابك الشخصية هنا.</CardDescription>
+    <Card className="max-w-3xl mx-auto shadow-xl rounded-xl">
+      <CardHeader className="text-center p-8 border-b">
+        <UserCog className="mx-auto text-primary mb-6" size={56} strokeWidth={1.5} />
+        <CardTitle className="text-4xl font-bold text-primary">ملفي الشخصي</CardTitle>
+        <CardDescription className="text-lg text-muted-foreground mt-2">
+            قم بتحديث معلومات حسابك الشخصية وتفضيلاتك هنا.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-8">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
             <FormField
               control={form.control}
               name="displayName"
@@ -151,7 +149,7 @@ export default function PatientProfilePage() {
                 <FormItem>
                   <FormLabel className="text-md">الاسم الكامل</FormLabel>
                   <FormControl>
-                    <Input placeholder="اسمك كما يظهر للمستخدمين" {...field} />
+                    <Input placeholder="اسمك كما يظهر للمستخدمين والأطباء" {...field} className="py-3 text-base"/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -164,22 +162,22 @@ export default function PatientProfilePage() {
                 <FormItem>
                   <FormLabel className="text-md">البريد الإلكتروني</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="بريدك الإلكتروني" {...field} readOnly className="bg-muted/50 cursor-not-allowed" />
+                    <Input type="email" placeholder="بريدك الإلكتروني المسجل" {...field} readOnly className="bg-muted/50 cursor-not-allowed py-3 text-base" />
                   </FormControl>
-                  <FormDescription>لا يمكن تغيير البريد الإلكتروني حالياً.</FormDescription>
+                  <FormDescription className="text-xs">لا يمكن تغيير البريد الإلكتروني للحساب حالياً من هنا.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-x-6 gap-y-8">
               <FormField
                 control={form.control}
                 name="phoneNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-md">رقم الهاتف (اختياري)</FormLabel>
+                    <FormLabel className="text-md flex items-center gap-1"><Phone size={16}/> رقم الهاتف (اختياري)</FormLabel>
                     <FormControl>
-                      <Input type="tel" placeholder="مثال: 05xxxxxxxx" {...field} />
+                      <Input type="tel" placeholder="مثال: 0612345678" {...field} className="py-3 text-base"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -190,9 +188,9 @@ export default function PatientProfilePage() {
                 name="dateOfBirth"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-md">تاريخ الميلاد (اختياري)</FormLabel>
+                    <FormLabel className="text-md flex items-center gap-1"><CalendarDays size={16}/> تاريخ الميلاد (اختياري)</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" {...field} className="py-3 text-base" max={new Date().toISOString().split("T")[0]}/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -200,16 +198,16 @@ export default function PatientProfilePage() {
               />
             </div>
             
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3" disabled={isSubmitting}>
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-6 rounded-lg shadow-md hover:shadow-lg transition-shadow" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  جاري الحفظ...
+                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                  جاري حفظ التغييرات...
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-5 w-5" />
-                  حفظ التغييرات
+                  <Save className="mr-2 h-6 w-6" />
+                  حفظ التغييرات في الملف الشخصي
                 </>
               )}
             </Button>
