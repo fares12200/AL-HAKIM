@@ -34,7 +34,7 @@ export interface User {
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "al-hakim-41a51",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
@@ -47,12 +47,12 @@ let dbInstance: Firestore | undefined;
 try {
   let configValid = true;
   if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
-    console.error(
-        "Firebase Project ID is not configured correctly. Please check your .env.local file and ensure NEXT_PUBLIC_FIREBASE_PROJECT_ID is set to your actual Firebase Project ID."
+    console.warn( // Changed to warn as we provide a default now
+        "Firebase Project ID is not configured in .env.local, using default or provided ID."
     );
-    configValid = false;
+    if (firebaseConfig.projectId === "YOUR_PROJECT_ID") configValid = false;
   }
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "AIzaSyBctoFJW1hKPLZPgN18aOM96qRgp3N-rpc_PLACEHOLDER") { // Added check for specific placeholder
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "AIzaSyBctoFJW1hKPLZPgN18aOM96qRgp3N-rpc") { // Check for specific placeholder
     console.error(
         "Firebase API Key is not configured correctly. Please check your .env.local file and ensure NEXT_PUBLIC_FIREBASE_API_KEY is set to your actual Firebase API Key."
     );
