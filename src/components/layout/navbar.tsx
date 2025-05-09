@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch } from 'lucide-react'; // Added CalendarSearch
+import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch, Bell, CheckCheck, XCircle, InfoIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -13,8 +13,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from '@/components/ui/badge';
+import { useNotification, type Notification } from '@/contexts/notification-context';
+import { formatDistanceToNow } from 'date-fns';
+import { arSA } from 'date-fns/locale';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const baseNavLinks = [
   { href: '/', label: 'الرئيسية', icon: Home, requiresAuth: false, roles: ['patient', 'doctor', null] },
@@ -23,9 +29,13 @@ const baseNavLinks = [
 
 export default function Navbar() {
   const { user, logOut, loading } = useAuth();
+  const { getNotificationsForUser, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotification();
   const [isMobile, setIsMobile] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  const userNotifications = user ? getNotificationsForUser(user.uid) : [];
+  const currentUserUnreadCount = user ? unreadCount : 0;
 
 
   useEffect(() => {
@@ -47,7 +57,7 @@ export default function Navbar() {
     if (user) {
       if (user.role === 'patient') {
         dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['patient'] });
-        dynamicLinks.push({ href: '/patient/appointments', label: 'مواعيدي', icon: CalendarSearch, requiresAuth: true, roles: ['patient'] }); // Added My Appointments link for patients
+        dynamicLinks.push({ href: '/patient/appointments', label: 'مواعيدي', icon: CalendarSearch, requiresAuth: true, roles: ['patient'] });
       } else if (user.role === 'doctor') {
         dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['doctor'] });
       }
@@ -87,6 +97,99 @@ export default function Navbar() {
          )
     );
   };
+  
+  const renderNotificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'success':
+        return <CheckCheck className="h-5 w-5 text-green-500" />;
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'warning':
+        return <InfoIcon className="h-5 w-5 text-yellow-500" />; // Or use AlertTriangle
+      case 'info':
+      default:
+        return <InfoIcon className="h-5 w-5 text-blue-500" />;
+    }
+  };
+
+  const NotificationMenu = () => {
+    if (!user) return null;
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative rounded-lg p-2">
+            <Bell size={24} />
+            {currentUserUnreadCount > 0 && (
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0 text-xs">
+                {currentUserUnreadCount}
+              </Badge>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-80 md:w-96 rounded-xl shadow-lg mt-2 p-0" align="end">
+          <DropdownMenuLabel className="px-4 py-3 border-b text-lg font-semibold text-right">
+            الإشعارات ({userNotifications.length})
+          </DropdownMenuLabel>
+          <ScrollArea className="h-[300px] md:h-[400px]">
+            {userNotifications.length === 0 ? (
+              <p className="text-center text-muted-foreground py-10 px-4 text-sm">لا توجد إشعارات جديدة.</p>
+            ) : (
+              <DropdownMenuGroup>
+                {userNotifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    className={`p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
+                    onClick={() => {
+                      if (!notification.read) markAsRead(notification.id);
+                      if (notification.link) router.push(notification.link);
+                    }}
+                    dir="rtl"
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <div className="flex-shrink-0 mt-1">
+                        {renderNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-grow">
+                        <p className={`text-sm ${!notification.read ? 'font-semibold text-foreground' : 'text-foreground/80'}`}>
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true, locale: arSA })}
+                        </p>
+                      </div>
+                       {!notification.read && <div className="w-2 h-2 bg-primary rounded-full self-center ml-auto"></div>}
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            )}
+          </ScrollArea>
+          {userNotifications.length > 0 && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup className="p-2">
+                <DropdownMenuItem
+                    onClick={() => markAllAsRead(user.uid)}
+                    disabled={currentUserUnreadCount === 0}
+                    className="justify-center text-sm py-2 cursor-pointer hover:bg-muted/80"
+                >
+                    وضع علامة على الكل كمقروء
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                    onClick={() => clearNotifications(user.uid)}
+                    className="justify-center text-sm py-2 text-destructive hover:bg-destructive/10 cursor-pointer"
+                >
+                    مسح جميع الإشعارات
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
 
   const NavContent = () => (
     <>
@@ -130,6 +233,8 @@ export default function Navbar() {
             </SheetClose>
            </>
         ) : (
+          <>
+          <NotificationMenu />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0">
@@ -157,6 +262,7 @@ export default function Navbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </>
         )
       ) : !loading ? (
          isMobile ? (
@@ -231,6 +337,7 @@ export default function Navbar() {
                  <h2 className="text-2xl font-bold">منصة الحكيم</h2>
                </div>
               <nav className="flex flex-col space-y-3 mt-2">
+                {user && <NotificationMenu /> }
                 <NavContent />
               </nav>
             </SheetContent>

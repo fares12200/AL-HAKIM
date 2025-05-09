@@ -25,6 +25,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { useNotification } from '@/contexts/notification-context';
 
 interface EnrichedAppointment extends Appointment {
   doctorName?: string;
@@ -35,6 +36,7 @@ export default function PatientAppointmentsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const [appointments, setAppointments] = useState<EnrichedAppointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -71,15 +73,21 @@ export default function PatientAppointmentsPage() {
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
+  const handleCancelAppointment = async (appointment: EnrichedAppointment) => {
     try {
-        await deleteAppointment(appointmentId); 
-        setAppointments(prev => prev.filter(app => app.id !== appointmentId));
+        await deleteAppointment(appointment.id); 
+        setAppointments(prev => prev.filter(app => app.id !== appointment.id));
         toast({
             title: "تم الإلغاء بنجاح",
             description: "تم إلغاء الموعد.",
             variant: "default",
             className: "bg-orange-500 text-white border-orange-600",
+        });
+        addNotification({
+          message: `قام المريض ${user?.displayName || 'مجهول'} بإلغاء موعده معك ليوم ${format(new Date(appointment.date), 'PPP', { locale: arSA })} الساعة ${appointment.time}.`,
+          type: 'warning',
+          recipientId: appointment.doctorId, // Notify the doctor
+          link: `/doctor/appointments`
         });
     } catch (error) {
         console.error("Error cancelling appointment:", error);
@@ -207,7 +215,7 @@ export default function PatientAppointmentsPage() {
                                               <AlertDialogCancel className="px-6 py-2.5 text-base rounded-md">تراجع</AlertDialogCancel>
                                               <AlertDialogAction
                                                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-6 py-2.5 text-base rounded-md"
-                                                  onClick={() => handleCancelAppointment(appointment.id)}
+                                                  onClick={() => handleCancelAppointment(appointment)}
                                               >
                                                   نعم، قم بالإلغاء
                                               </AlertDialogAction>
@@ -266,3 +274,4 @@ export default function PatientAppointmentsPage() {
     </div>
   );
 }
+

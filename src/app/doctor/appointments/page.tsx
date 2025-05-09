@@ -26,12 +26,14 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import PatientProfileModal from '@/components/patients/patient-profile-modal';
 import PatientMedicalRecordModal from '@/components/patients/patient-medical-record-modal';
+import { useNotification } from '@/contexts/notification-context';
 
 
 export default function DoctorAppointmentsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,15 +65,21 @@ export default function DoctorAppointmentsPage() {
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
+  const handleCancelAppointment = async (appointment: Appointment) => {
     try {
-        await deleteAppointment(appointmentId); 
-        setAppointments(prev => prev.filter(app => app.id !== appointmentId));
+        await deleteAppointment(appointment.id); 
+        setAppointments(prev => prev.filter(app => app.id !== appointment.id));
         toast({
             title: "تم الإلغاء بنجاح",
             description: "تم إلغاء الموعد.",
             variant: "default",
             className: "bg-orange-500 text-white border-orange-600",
+        });
+        addNotification({
+          message: `لقد قام د. ${user?.displayName || 'الطبيب'} بإلغاء موعدك ليوم ${format(new Date(appointment.date), 'PPP', { locale: arSA })} الساعة ${appointment.time}.`,
+          type: 'warning',
+          recipientId: appointment.patientId,
+          link: `/patient/appointments`
         });
     } catch (error) {
         console.error("Error cancelling appointment:", error);
@@ -83,15 +91,21 @@ export default function DoctorAppointmentsPage() {
     }
   };
   
-  const handleConfirmAppointment = async (appointmentId: string) => {
+  const handleConfirmAppointment = async (appointment: Appointment) => {
     try {
-        await updateAppointmentStatus(appointmentId, 'confirmed');
-        setAppointments(prev => prev.map(app => app.id === appointmentId ? { ...app, status: 'confirmed' } : app));
+        await updateAppointmentStatus(appointment.id, 'confirmed');
+        setAppointments(prev => prev.map(app => app.id === appointment.id ? { ...app, status: 'confirmed' } : app));
         toast({ 
             title: "تم تأكيد الموعد", 
             description: `تم تأكيد الموعد بنجاح.`,
             variant: "default",
             className: "bg-green-500 text-white border-green-600",
+        });
+        addNotification({
+            message: `تم تأكيد موعدك مع د. ${user?.displayName || 'الطبيب'} ليوم ${format(new Date(appointment.date), 'PPP', { locale: arSA })} الساعة ${appointment.time}.`,
+            type: 'success',
+            recipientId: appointment.patientId,
+            link: `/patient/appointments`
         });
     } catch (error) {
         console.error("Error confirming appointment:", error);
@@ -221,7 +235,7 @@ export default function DoctorAppointmentsPage() {
                                     </TableCell>
                                     <TableCell className="text-center space-x-1 space-x-reverse py-3">
                                     {appointment.status === 'pending' && (
-                                        <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700 hover:bg-green-100/50 rounded-full w-9 h-9" onClick={() => handleConfirmAppointment(appointment.id)} title="تأكيد الموعد">
+                                        <Button variant="ghost" size="icon" className="text-green-600 hover:text-green-700 hover:bg-green-100/50 rounded-full w-9 h-9" onClick={() => handleConfirmAppointment(appointment)} title="تأكيد الموعد">
                                             <CheckCircle size={20} />
                                         </Button>
                                     )}
@@ -243,7 +257,7 @@ export default function DoctorAppointmentsPage() {
                                               <AlertDialogCancel className="px-6 py-2.5 text-base rounded-md">تراجع</AlertDialogCancel>
                                               <AlertDialogAction
                                                   className="bg-destructive hover:bg-destructive/90 text-destructive-foreground px-6 py-2.5 text-base rounded-md"
-                                                  onClick={() => handleCancelAppointment(appointment.id)}
+                                                  onClick={() => handleCancelAppointment(appointment)}
                                               >
                                                   نعم، قم بالإلغاء
                                               </AlertDialogAction>
@@ -324,3 +338,4 @@ export default function DoctorAppointmentsPage() {
     </div>
   );
 }
+

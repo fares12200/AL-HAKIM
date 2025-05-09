@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -45,4 +46,8 @@ const ScrollBar = React.forwardRef<
 ))
 ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
 
-export { ScrollArea, ScrollBar }
+const ScrollAreaViewport = ScrollAreaPrimitive.Viewport;
+
+
+export { ScrollArea, ScrollBar, ScrollAreaViewport }
+
