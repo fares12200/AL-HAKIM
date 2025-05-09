@@ -3,16 +3,14 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { auth, type User as FirebaseUser, db } from '@/lib/firebase'; // Using aliased User
-import { useRouter, usePathname } from 'next/navigation';
+import { auth, db, type User as AppUser, type FirebaseUserType } from '@/lib/firebase'; // Using aliased User
+import { useRouter } from 'next/navigation';
 
-export interface User extends FirebaseUser {
-  // Extend with any app-specific user properties if needed in context
-  // For now, FirebaseUser is sufficient, especially with the added 'role'
-}
+// The AppUser interface (potentially with role) is now defined in firebase.ts
+// We use FirebaseUserType for the raw Firebase auth user object
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null; // This will be our app-specific user object with role
   loading: boolean;
   signUp: (email?: string, password?: string, name?: string, role?: 'patient' | 'doctor') => Promise<void>;
   logIn: (email?: string, password?: string) => Promise<void>;
@@ -22,9 +20,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to set a cookie
 const setCookie = (name: string, value: string, days: number = 7) => {
-  if (typeof document === 'undefined') return; // Ensure this runs only on client
+  if (typeof document === 'undefined') return;
   let expires = "";
   if (days) {
     const date = new Date();
@@ -34,38 +31,54 @@ const setCookie = (name: string, value: string, days: number = 7) => {
   document.cookie = name + "=" + (value || "")  + expires + "; path=/";
 };
 
-// Helper function to clear a cookie
 const clearCookie = (name: string) => {
-  if (typeof document === 'undefined') return; // Ensure this runs only on client
+  if (typeof document === 'undefined') return;
   document.cookie = name + '=; Max-Age=-99999999; path=/';
 };
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser: FirebaseUserType | null) => {
       if (firebaseUser) {
-        const userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const fullUser: User = { 
-            ...firebaseUser, 
-            role: userData.role, 
-            displayName: userData.name || firebaseUser.displayName 
-          };
-          setUser(fullUser);
-          setCookie('mockAuthToken', 'true');
-          setCookie('mockUserRole', userData.role || 'patient'); // default to patient if role somehow missing
-        } else {
-          // Fallback if no Firestore doc (e.g., admin-created user without profile yet)
-          setUser(firebaseUser as User); // User might not have role yet
-          setCookie('mockAuthToken', 'true');
-          clearCookie('mockUserRole'); // No specific role known
+        try {
+          const userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
+          if (userDoc.exists()) {
+            const userData = userDoc.data() as AppUser; // Assuming Firestore data matches AppUser structure
+            const fullUser: AppUser = { 
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: userData.name || firebaseUser.displayName, // Prefer Firestore name
+              role: userData.role, 
+              photoURL: userData.photoURL || firebaseUser.photoURL, // Prefer Firestore photoURL
+            };
+            setUser(fullUser);
+            setCookie('mockAuthToken', 'true'); // Keep mock cookie for middleware simulation
+            setCookie('mockUserRole', userData.role || 'patient');
+          } else {
+            // User exists in Auth but not in Firestore (e.g., during signup process or if doc deleted)
+             // For a newly signed up user, role might not be set yet in Firestore.
+             // We might want to set a default or wait for Firestore doc creation.
+             // For now, treat as partial user.
+            setUser({ 
+                uid: firebaseUser.uid, 
+                email: firebaseUser.email, 
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                // role will be undefined here until Firestore doc is created/fetched
+            });
+            setCookie('mockAuthToken', 'true');
+            clearCookie('mockUserRole');
+          }
+        } catch (error) {
+            console.error("Error fetching user document from Firestore:", error);
+            setUser({ uid: firebaseUser.uid, email: firebaseUser.email, displayName: firebaseUser.displayName, photoURL: firebaseUser.photoURL }); // Fallback to auth data
+            setCookie('mockAuthToken', 'true');
+            clearCookie('mockUserRole');
         }
       } else {
         setUser(null);
@@ -84,18 +97,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setLoading(true);
     try {
-      const userCredential = await auth.createUserWithEmailAndPassword(email, password, name, role);
+      const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       if (userCredential && userCredential.user) {
-        const newUser = {
-          email: userCredential.user.email,
-          name: name,
+        const firebaseUser = userCredential.user;
+        // Update Firebase Auth profile (displayName)
+        await auth.updateProfile(firebaseUser, { displayName: name });
+
+        // Create user document in Firestore
+        const newUserDoc: AppUser & { createdAt: string } = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          name: name, // Store name in Firestore as well
           role: role,
+          photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid.substring(0,10)}/200/200`,
           createdAt: new Date().toISOString(),
         };
-        await db.setDoc(`users/${userCredential.user.uid}`, newUser);
+        await db.setDoc(`users/${firebaseUser.uid}`, newUserDoc);
         
-        const fullUser: User = { uid: userCredential.user.uid, email, displayName: name, role };
-        setUser(fullUser);
+        setUser({ ...newUserDoc }); // Set context user from Firestore data
         setCookie('mockAuthToken', 'true');
         setCookie('mockUserRole', role);
 
@@ -105,7 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Sign up error:", error);
       clearCookie('mockAuthToken');
       clearCookie('mockUserRole');
-      throw error;
+      throw error; // Re-throw to be caught by the form
     } finally {
       setLoading(false);
     }
@@ -119,20 +138,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
        if (userCredential && userCredential.user) {
-        const userDoc = await db.getDoc(`users/${userCredential.user.uid}`);
-        let role: 'patient' | 'doctor' = 'patient'; 
-        let displayName = userCredential.user.displayName;
-
+        const firebaseUser = userCredential.user;
+        const userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
+        
         if (userDoc.exists()) {
-          const userData = userDoc.data();
-          role = userData.role || 'patient';
-          displayName = userData.name || userCredential.user.displayName;
+            const userData = userDoc.data() as AppUser;
+            const fullUser: AppUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: userData.name || firebaseUser.displayName,
+              role: userData.role,
+              photoURL: userData.photoURL || firebaseUser.photoURL,
+            };
+            setUser(fullUser);
+            setCookie('mockAuthToken', 'true');
+            setCookie('mockUserRole', userData.role || 'patient');
+            router.push(userData.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
+        } else {
+            // Should not happen for a logged-in user if signup process is correct
+            throw new Error("User document not found in Firestore.");
         }
-         const fullUser: User = { ...userCredential.user, role, displayName };
-         setUser(fullUser);
-         setCookie('mockAuthToken', 'true');
-         setCookie('mockUserRole', role);
-         router.push(role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
       }
     } catch (error) {
       console.error("Log in error:", error);
@@ -154,7 +179,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       router.push('/');
     } catch (error) {
       console.error("Log out error:", error);
-      // Cookies might still be there if signOut fails, attempt to clear
       clearCookie('mockAuthToken');
       clearCookie('mockUserRole');
       throw error;
@@ -164,11 +188,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const fetchUserRole = async (uid: string): Promise<'patient' | 'doctor' | undefined> => {
-    const userDoc = await db.getDoc(`users/${uid}`);
-    if (userDoc.exists()) {
-      return userDoc.data().role;
+    try {
+        const userDoc = await db.getDoc(`users/${uid}`);
+        if (userDoc.exists()) {
+          return userDoc.data()?.role;
+        }
+        return undefined;
+    } catch(error) {
+        console.error("Error fetching user role:", error);
+        return undefined;
     }
-    return undefined;
   };
 
 
@@ -186,4 +215,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

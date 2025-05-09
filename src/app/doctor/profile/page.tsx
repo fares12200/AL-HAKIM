@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -15,9 +16,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2, Star, ImagePlus, Phone, UserSquare2, Palette } from 'lucide-react';
 import { db } from '@/lib/firebase'; 
-import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfileInMock, type Doctor } from '@/services/doctors'; 
+import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfile, type Doctor } from '@/services/doctors'; 
 import Image from 'next/image';
-import { Label } from '@/components/ui/label';
+// import { Label } from '@/components/ui/label'; // Already imported via FormLabel
 import { Slider } from '@/components/ui/slider';
 
 const doctorProfileSchema = z.object({
@@ -26,13 +27,13 @@ const doctorProfileSchema = z.object({
   specialty: z.string({ required_error: "يرجى اختيار التخصص."}).min(1, "يرجى اختيار التخصص."),
   wilaya: z.string({ required_error: "يرجى اختيار الولاية."}).min(1, "يرجى اختيار الولاية."),
   location: z.string().min(5, { message: "يرجى إدخال عنوان العيادة (5 أحرف على الأقل)."}).max(150, {message: "العنوان طويل جدًا."}),
-  bio: z.string().max(1500, "السيرة الذاتية يجب ألا تتجاوز 1500 حرف.").optional(),
-  phoneNumber: z.string().regex(/^0[5-7][0-9]{8}$/, {message: "رقم الهاتف غير صالح (يجب أن يبدأ بـ 05، 06، أو 07 ويحتوي على 10 أرقام)."}).optional().or(z.literal('')),
-  experience: z.string().max(700, "وصف الخبرة يجب ألا يتجاوز 700 حرف.").optional(),
-  skills: z.string().max(700, "المهارات يجب ألا تتجاوز 700 حرف.").optional(), 
-  equipment: z.string().max(700, "المعدات يجب ألا تتجاوز 700 حرف.").optional(), 
-  imageUrl: z.string().url({ message: "الرجاء إدخال رابط صورة صحيح أو تركه فارغًا." }).optional().or(z.literal('')),
-  rating: z.number().min(0).max(5).optional(),
+  bio: z.string().max(1500, "السيرة الذاتية يجب ألا تتجاوز 1500 حرف.").optional().nullable(),
+  phoneNumber: z.string().regex(/^0[5-7][0-9]{8}$/, {message: "رقم الهاتف غير صالح (يجب أن يبدأ بـ 05، 06، أو 07 ويحتوي على 10 أرقام)."}).optional().nullable().or(z.literal('')),
+  experience: z.string().max(700, "وصف الخبرة يجب ألا يتجاوز 700 حرف.").optional().nullable(),
+  skills: z.string().max(700, "المهارات يجب ألا تتجاوز 700 حرف.").optional().nullable(), 
+  equipment: z.string().max(700, "المعدات يجب ألا تتجاوز 700 حرف.").optional().nullable(), 
+  imageUrl: z.string().url({ message: "الرجاء إدخال رابط صورة صحيح أو تركه فارغًا." }).optional().nullable().or(z.literal('')),
+  rating: z.number().min(0).max(5).optional().nullable(),
 });
 
 type DoctorProfileFormValues = z.infer<typeof doctorProfileSchema>;
@@ -82,14 +83,14 @@ export default function DoctorProfilePage() {
       const fetchProfile = async () => {
         setIsLoadingData(true);
         try {
-          const userDocRefPath = `users/${user.uid}`; 
-          const userDoc = await db.getDoc(userDocRefPath);
+          // Firestore data is fetched via db.getDoc in services/doctors.ts or directly
+          const userDocSnapshot = await db.getDoc(`users/${user.uid}`); 
           
-          if (userDoc.exists()) {
-            const data = userDoc.data() as Partial<Doctor> & { name?: string }; 
+          if (userDocSnapshot.exists()) {
+            const data = userDocSnapshot.data() as Partial<Doctor> & { name?: string }; 
             form.reset({
               displayName: data.name || user.displayName || '',
-              email: data.email || user.email || '',
+              email: data.email || user.email || '', // Email from auth user, should be same
               specialty: data.specialty || '',
               wilaya: data.wilaya || '',
               location: data.location || '',
@@ -103,6 +104,7 @@ export default function DoctorProfilePage() {
             });
             setImagePreview(data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`);
           } else {
+             // If no doc, prefill with auth data
              form.reset({
                 displayName: user.displayName || '',
                 email: user.email || '',
@@ -130,23 +132,29 @@ export default function DoctorProfilePage() {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      const profileDataToSave: Partial<Doctor> & {name: string, email: string, updatedAt: string} = {
-        name: data.displayName,
-        email: data.email,
+      // Prepare data for Firestore, mapping displayName to 'name'
+      const profileDataToSave: Partial<Doctor> = {
+        name: data.displayName, // Maps to 'name' in Firestore
+        // email: data.email, // Email is usually not updated here, but from auth context or separate process
         specialty: data.specialty,
         wilaya: data.wilaya,
         location: data.location,
-        bio: data.bio,
-        phoneNumber: data.phoneNumber,
-        experience: data.experience,
-        skills: data.skills,
-        equipment: data.equipment,
+        bio: data.bio || null,
+        phoneNumber: data.phoneNumber || null,
+        experience: data.experience || null,
+        skills: data.skills || null,
+        equipment: data.equipment || null,
         imageUrl: data.imageUrl || `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`,
-        rating: data.rating !== undefined ? Number(data.rating) : 4.0,
-        updatedAt: new Date().toISOString(),
+        rating: data.rating !== undefined && data.rating !== null ? Number(data.rating) : 4.0,
       };
       
-      await updateDoctorProfileInMock(user.uid, profileDataToSave);
+      await updateDoctorProfile(user.uid, profileDataToSave);
+
+      // Update displayName in Firebase Auth if it changed
+      if (user.displayName !== data.displayName) {
+        await auth.updateProfile(auth.getCurrentUser()!, { displayName: data.displayName });
+      }
+
 
       toast({
         title: "تم تحديث الملف المهني بنجاح!",
@@ -172,17 +180,17 @@ export default function DoctorProfilePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUri = reader.result as string;
-        form.setValue('imageUrl', dataUri); 
+        form.setValue('imageUrl', dataUri, { shouldValidate: true }); 
         setImagePreview(dataUri);
-        toast({ title: "تنبيه", description: "سيتم استخدام الصورة المرفوعة كـ Data URI. في تطبيق حقيقي، يتم رفعها إلى خادم تخزين.", className: "bg-yellow-500 text-black border-yellow-600"});
+        toast({ title: "تنبيه", description: "سيتم استخدام الصورة المرفوعة كـ Data URI. في تطبيق حقيقي، يتم رفعها إلى خادم تخزين مثل Firebase Storage.", className: "bg-yellow-500 text-black border-yellow-600"});
       };
       reader.readAsDataURL(file);
     } else { 
         const urlValue = form.getValues('imageUrl');
         if (urlValue && urlValue.startsWith('http')) {
             setImagePreview(urlValue);
-        } else if (!urlValue) {
-             setImagePreview(`https://picsum.photos/seed/${user?.uid.substring(0,10)}/400/400`);
+        } else if (!urlValue && user?.uid) { // Check user?.uid
+             setImagePreview(`https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400`);
         }
     }
   };
@@ -232,7 +240,7 @@ export default function DoctorProfilePage() {
                                 {...field} 
                                 onChange={(e) => {
                                     field.onChange(e); 
-                                    setImagePreview(e.target.value || `https://picsum.photos/seed/${user?.uid.substring(0,10)}/400/400`);
+                                    setImagePreview(e.target.value || (user?.uid ? `https://picsum.photos/seed/${user.uid.substring(0,10)}/400/400` : ''));
                                 }}
                                 value={field.value || ''}
                                 className="max-w-md text-center"
@@ -295,7 +303,7 @@ export default function DoctorProfilePage() {
                     render={({ field }) => (
                     <FormItem>
                         <FormLabel className="text-md">التخصص الطبي</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                         <FormControl>
                             <SelectTrigger className="py-3 text-base">
                             <SelectValue placeholder="اختر تخصصك الطبي" />
@@ -333,7 +341,7 @@ export default function DoctorProfilePage() {
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel className="text-md flex items-center gap-1"><Globe size={16}/> ولاية العيادة</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
                             <FormControl>
                                 <SelectTrigger className="py-3 text-base">
                                 <SelectValue placeholder="اختر ولاية موقع العيادة" />
