@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Doctor } from '@/services/doctors';
@@ -32,7 +33,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Clock, User, StickyNote, Send } from 'lucide-react';
+import { CalendarIcon, Clock, User, StickyNote, Send, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createAppointment, type Appointment } from '@/services/appointments';
 import { useState, useEffect } from 'react';
