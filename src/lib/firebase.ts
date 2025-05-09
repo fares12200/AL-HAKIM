@@ -18,8 +18,7 @@ import {
   getDocs as fbGetDocs,
   query as fbQuery,
   where as fbWhere,
-  type DocumentData,
-  type QueryConstraint
+  type DocumentData
 } from 'firebase/firestore';
 
 export interface User {
@@ -46,34 +45,34 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const firebaseAuth = getFirebaseAuth(app);
-const firestoreDb = getDbInstance(app);
+const firebaseAuthInstance = getFirebaseAuth(app);
+const firestoreDbInstance = getDbInstance(app);
 
 export const auth = {
   createUserWithEmailAndPassword: async (email?: string, password?: string): Promise<{ user: FirebaseUserType } | null> => {
     if (!email || !password) {
       throw new Error('Firebase Auth: Email and password are required for signup.');
     }
-    return await fbCreateUserWithEmailAndPassword(firebaseAuth, email, password);
+    return await fbCreateUserWithEmailAndPassword(firebaseAuthInstance, email, password);
   },
   signInWithEmailAndPassword: async (email?: string, password?: string): Promise<{ user: FirebaseUserType } | null> => {
     if (!email || !password) {
       throw new Error('Firebase Auth: Email and password are required for signin.');
     }
-    return await fbSignInWithEmailAndPassword(firebaseAuth, email, password);
+    return await fbSignInWithEmailAndPassword(firebaseAuthInstance, email, password);
   },
   signOut: async (): Promise<void> => {
-    return await fbSignOut(firebaseAuth);
+    return await fbSignOut(firebaseAuthInstance);
   },
   onAuthStateChanged: (callback: (user: FirebaseUserType | null) => void): (() => void) => {
-    return fbOnAuthStateChanged(firebaseAuth, callback);
+    return fbOnAuthStateChanged(firebaseAuthInstance, callback);
   },
   updateProfile: async (user: FirebaseUserType, profile: { displayName?: string | null, photoURL?: string | null }): Promise<void> => {
     if (!user) throw new Error("User must be authenticated to update profile.");
     return await fbUpdateProfile(user, profile);
   },
   getCurrentUser: (): FirebaseUserType | null => {
-    return firebaseAuth.currentUser;
+    return firebaseAuthInstance.currentUser;
   }
 };
 
@@ -81,13 +80,13 @@ export const db = {
   setDoc: async (path: string, data: DocumentData): Promise<void> => {
     const [collectionName, docId] = path.split('/');
     if (!collectionName || !docId) throw new Error("Invalid path for setDoc. Must be 'collectionName/docId'.");
-    const docRef = doc(firestoreDb, collectionName, docId);
+    const docRef = doc(firestoreDbInstance, collectionName, docId);
     await fbSetDoc(docRef, data, { merge: true }); // Using merge: true by default for updates
   },
   getDoc: async (path: string): Promise<{ exists: () => boolean; data: () => DocumentData | undefined, id: string }> => {
     const [collectionName, docId] = path.split('/');
     if (!collectionName || !docId) throw new Error("Invalid path for getDoc. Must be 'collectionName/docId'.");
-    const docRef = doc(firestoreDb, collectionName, docId);
+    const docRef = doc(firestoreDbInstance, collectionName, docId);
     const docSnap = await fbGetDoc(docRef);
     return {
       exists: () => docSnap.exists(),
@@ -96,12 +95,12 @@ export const db = {
     };
   },
   getDocs: async (collectionName: string): Promise<DocumentData[]> => {
-    const collectionRef = collection(firestoreDb, collectionName);
+    const collectionRef = collection(firestoreDbInstance, collectionName);
     const querySnapshot = await fbGetDocs(collectionRef);
     return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
   },
   queryDocs: async (collectionName: string, conditions: {field: string, operator: any, value: any}[]): Promise<DocumentData[]> => {
-    let q = fbQuery(collection(firestoreDb, collectionName));
+    let q = fbQuery(collection(firestoreDbInstance, collectionName));
     conditions.forEach(condition => {
       q = fbQuery(q, fbWhere(condition.field, condition.operator, condition.value));
     });
