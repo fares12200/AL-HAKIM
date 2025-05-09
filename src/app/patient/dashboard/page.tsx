@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -6,7 +7,7 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CalendarCheck, FileText, UserCircle, Loader2, HeartPulse, BookOpenText, Settings } from 'lucide-react';
+import { CalendarCheck, FileText, UserCircle, Loader2, HeartPulse, BookOpenText, Settings, CalendarSearch } from 'lucide-react'; // Added CalendarSearch
 
 export default function PatientDashboardPage() {
   const { user, loading } = useAuth();
@@ -43,20 +44,19 @@ export default function PatientDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl text-primary">
-              <CalendarCheck size={32} strokeWidth={1.5} />
+              <CalendarSearch size={32} strokeWidth={1.5} /> {/* Changed Icon */}
               مواعيدي
             </CardTitle>
             <CardDescription className="text-md text-muted-foreground">عرض وإدارة مواعيدك القادمة والسابقة مع الأطباء.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col justify-between h-full">
             <div>
-                {/* Placeholder for upcoming appointments list - to be implemented later */}
-                <p className="text-muted-foreground mb-5">لا توجد مواعيد قادمة حالياً. (ميزة قيد التطوير)</p>
+                <p className="text-muted-foreground mb-5">راجع مواعيدك القادمة والسابقة، وقم بإلغاء المواعيد إذا لزم الأمر.</p>
             </div>
-            <Link href="/appointments" passHref>
+            <Link href="/patient/appointments" passHref> {/* Updated Link */}
               <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-md py-3 rounded-lg mt-auto">
-                <BookOpenText size={18} className="mr-2 rtl:ml-2"/>
-                حجز موعد جديد
+                <CalendarCheck size={18} className="mr-2 rtl:ml-2"/> {/* Changed Icon in Button */}
+                الذهاب إلى مواعيدي
               </Button>
             </Link>
           </CardContent>
@@ -99,6 +99,17 @@ export default function PatientDashboardPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <div className="text-center mt-12">
+        <Link href="/appointments" passHref>
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                 <BookOpenText size={20} className="mr-2 rtl:ml-2"/>
+                البحث عن طبيب وحجز موعد جديد
+            </Button>
+        </Link>
+      </div>
+
     </div>
   );
 }
+

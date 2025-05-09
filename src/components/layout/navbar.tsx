@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase } from 'lucide-react';
+import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch } from 'lucide-react'; // Added CalendarSearch
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -47,6 +47,7 @@ export default function Navbar() {
     if (user) {
       if (user.role === 'patient') {
         dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['patient'] });
+        dynamicLinks.push({ href: '/patient/appointments', label: 'مواعيدي', icon: CalendarSearch, requiresAuth: true, roles: ['patient'] }); // Added My Appointments link for patients
       } else if (user.role === 'doctor') {
         dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['doctor'] });
       }
@@ -102,7 +103,7 @@ export default function Navbar() {
         ) : (
             <Link key={link.href} href={link.href} passHref>
             <Button variant="ghost" className="flex items-center justify-center gap-2 text-foreground hover:text-primary text-md px-4 py-2 rounded-lg">
-                {user && link.href === (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard') && (
+                {user && (link.href === (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard') || link.href === '/patient/appointments' && user.role === 'patient') && (
                   <Avatar className="h-7 w-7">
                     <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png?size=28`} alt={user.displayName || 'User'} />
                     <AvatarFallback className="text-xs bg-primary/20 text-primary font-semibold">
@@ -111,7 +112,7 @@ export default function Navbar() {
                   </Avatar>
                 )}
                {!user && link.href === '/' &&  <link.icon size={18} strokeWidth={1.5}/> }
-               {user && link.href !== (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard') && <link.icon size={18} strokeWidth={1.5}/> }
+               {user && !( (link.href === (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard')) || (link.href === '/patient/appointments' && user.role === 'patient') ) && <link.icon size={18} strokeWidth={1.5}/> }
                 {link.label}
             </Button>
             </Link>
