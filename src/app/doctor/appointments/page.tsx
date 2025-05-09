@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CalendarCheck, AlertTriangle, Trash2, CheckCircle, XCircle, Users, ClockIcon } from 'lucide-react';
+import { Loader2, CalendarCheck, AlertTriangle, Trash2, CheckCircle, Users, ClockIcon, UserSquare2, FileHeart } from 'lucide-react';
 import { getAppointmentsForUser, updateAppointmentStatus, deleteAppointment, type Appointment } from '@/services/appointments'; 
 import {
   AlertDialog,
@@ -24,6 +24,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import PatientProfileModal from '@/components/patients/patient-profile-modal';
+import PatientMedicalRecordModal from '@/components/patients/patient-medical-record-modal';
 
 
 export default function DoctorAppointmentsPage() {
@@ -32,6 +34,11 @@ export default function DoctorAppointmentsPage() {
   const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [showPatientProfileModal, setShowPatientProfileModal] = useState(false);
+  const [showMedicalRecordModal, setShowMedicalRecordModal] = useState(false);
+  const [selectedAppointmentForModal, setSelectedAppointmentForModal] = useState<Appointment | null>(null);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -58,7 +65,7 @@ export default function DoctorAppointmentsPage() {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-        await deleteAppointment(appointmentId); // Or updateAppointmentStatus(appointmentId, 'cancelled')
+        await deleteAppointment(appointmentId); 
         setAppointments(prev => prev.filter(app => app.id !== appointmentId));
         toast({
             title: "تم الإلغاء بنجاح",
@@ -96,6 +103,16 @@ export default function DoctorAppointmentsPage() {
     }
   };
 
+  const openPatientProfile = (appointment: Appointment) => {
+    setSelectedAppointmentForModal(appointment);
+    setShowPatientProfileModal(true);
+  };
+
+  const openMedicalRecord = (appointment: Appointment) => {
+    setSelectedAppointmentForModal(appointment);
+    setShowMedicalRecordModal(true);
+  };
+
 
   if (authLoading || isLoading || !user || user.role !== 'doctor') {
     return (
@@ -113,13 +130,13 @@ export default function DoctorAppointmentsPage() {
   const getStatusBadgeVariant = (status: Appointment['status']): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case 'confirmed':
-        return 'default'; // Greenish in theme
+        return 'default'; 
       case 'pending':
-        return 'secondary'; // Bluish in theme
+        return 'secondary'; 
       case 'cancelled':
-        return 'destructive'; // Reddish
+        return 'destructive'; 
       case 'completed':
-        return 'outline'; // Neutral
+        return 'outline'; 
       default:
         return 'secondary';
     }
@@ -179,6 +196,7 @@ export default function DoctorAppointmentsPage() {
                                 <TableHead className="text-right font-semibold text-base py-3">التاريخ</TableHead>
                                 <TableHead className="text-right font-semibold text-base py-3">الوقت</TableHead>
                                 <TableHead className="text-right font-semibold text-base py-3">الحالة</TableHead>
+                                <TableHead className="text-center font-semibold text-base py-3">ملف المريض</TableHead>
                                 <TableHead className="text-center font-semibold text-base py-3">إجراءات</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -192,6 +210,14 @@ export default function DoctorAppointmentsPage() {
                                       <Badge variant={getStatusBadgeVariant(appointment.status)} className="text-sm">
                                           {getStatusText(appointment.status)}
                                       </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center space-x-1 space-x-reverse py-3">
+                                        <Button variant="ghost" size="icon" className="text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-full w-9 h-9" onClick={() => openPatientProfile(appointment)} title="عرض الملف الشخصي للمريض">
+                                            <UserSquare2 size={20} />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-purple-600 hover:text-purple-700 hover:bg-purple-100/50 rounded-full w-9 h-9" onClick={() => openMedicalRecord(appointment)} title="عرض الملف الصحي للمريض">
+                                            <FileHeart size={20} />
+                                        </Button>
                                     </TableCell>
                                     <TableCell className="text-center space-x-1 space-x-reverse py-3">
                                     {appointment.status === 'pending' && (
@@ -273,6 +299,28 @@ export default function DoctorAppointmentsPage() {
             )}
         </CardContent>
         </Card>
+        {selectedAppointmentForModal && (
+        <>
+            <PatientProfileModal
+            patientId={selectedAppointmentForModal.patientId}
+            patientName={selectedAppointmentForModal.patientName || selectedAppointmentForModal.patientId.substring(0,10)+'...'}
+            isOpen={showPatientProfileModal}
+            onClose={() => {
+                setShowPatientProfileModal(false);
+                setSelectedAppointmentForModal(null);
+            }}
+            />
+            <PatientMedicalRecordModal
+            patientId={selectedAppointmentForModal.patientId}
+            patientName={selectedAppointmentForModal.patientName || selectedAppointmentForModal.patientId.substring(0,10)+'...'}
+            isOpen={showMedicalRecordModal}
+            onClose={() => {
+                setShowMedicalRecordModal(false);
+                setSelectedAppointmentForModal(null);
+            }}
+            />
+        </>
+        )}
     </div>
   );
 }
