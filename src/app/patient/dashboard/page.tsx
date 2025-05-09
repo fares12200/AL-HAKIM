@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { CalendarCheck, FileText, UserCircle, Loader2, HeartPulse, BookOpenText, Settings, CalendarSearch } from 'lucide-react'; // Added CalendarSearch
+import { CalendarCheck, FileText, UserCog, Loader2, HeartPulse, BookOpenText, Settings, ListChecks } from 'lucide-react'; 
 
 export default function PatientDashboardPage() {
   const { user, loading } = useAuth();
@@ -44,7 +44,7 @@ export default function PatientDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl text-primary">
-              <CalendarSearch size={32} strokeWidth={1.5} /> {/* Changed Icon */}
+              <ListChecks size={32} strokeWidth={1.5} /> {/* Changed Icon for My Appointments */}
               مواعيدي
             </CardTitle>
             <CardDescription className="text-md text-muted-foreground">عرض وإدارة مواعيدك القادمة والسابقة مع الأطباء.</CardDescription>
@@ -53,9 +53,9 @@ export default function PatientDashboardPage() {
             <div>
                 <p className="text-muted-foreground mb-5">راجع مواعيدك القادمة والسابقة، وقم بإلغاء المواعيد إذا لزم الأمر.</p>
             </div>
-            <Link href="/patient/appointments" passHref> {/* Updated Link */}
+            <Link href="/patient/appointments" passHref>
               <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-md py-3 rounded-lg mt-auto">
-                <CalendarCheck size={18} className="mr-2 rtl:ml-2"/> {/* Changed Icon in Button */}
+                <CalendarCheck size={18} className="mr-2 rtl:ml-2"/>
                 الذهاب إلى مواعيدي
               </Button>
             </Link>
@@ -83,7 +83,7 @@ export default function PatientDashboardPage() {
         <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl text-primary">
-              <UserCircle size={32} strokeWidth={1.5} />
+              <UserCog size={32} strokeWidth={1.5} /> {/* Changed Icon for My Profile / Control Panel Aspect */}
               ملفي الشخصي
             </CardTitle>
             <CardDescription className="text-md text-muted-foreground">إدارة معلومات حسابك، تفضيلاتك، وإعدادات الأمان.</CardDescription>
