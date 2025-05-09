@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, BriefcaseMedical, Save, Globe, MapPinIcon, Brain, Sparkles, Settings2, Star, ImagePlus, Phone, UserSquare2, Palette } from 'lucide-react';
-import { db } from '@/lib/firebase'; 
+import { db, auth } from '@/lib/firebase'; 
 import { getAllAlgerianWilayas, getUniqueSpecialties as fetchAllSpecialties, updateDoctorProfile, type Doctor } from '@/services/doctors'; 
 import Image from 'next/image';
 // import { Label } from '@/components/ui/label'; // Already imported via FormLabel
@@ -151,8 +151,9 @@ export default function DoctorProfilePage() {
       await updateDoctorProfile(user.uid, profileDataToSave);
 
       // Update displayName in Firebase Auth if it changed
-      if (user.displayName !== data.displayName) {
-        await auth.updateProfile(auth.getCurrentUser()!, { displayName: data.displayName });
+      const currentUser = auth.getCurrentUser();
+      if (currentUser && currentUser.displayName !== data.displayName) {
+        await auth.updateProfile(currentUser, { displayName: data.displayName });
       }
 
 
@@ -476,3 +477,4 @@ export default function DoctorProfilePage() {
     </Card>
   );
 }
+
