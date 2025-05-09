@@ -1,7 +1,7 @@
 import { getDoctor, type Doctor } from '@/services/doctors';
 import BookingForm from '@/components/appointments/booking-form';
 import Image from 'next/image';
-import { Stethoscope, MapPin, Briefcase, AlertTriangle, CalendarDays, Clock, Info, Award } from 'lucide-react';
+import { Stethoscope, MapPin, Briefcase, AlertTriangle, CalendarDays, Clock, Info, Award, Globe } from 'lucide-react';
 import type { Metadata, ResolvingMetadata } from 'next';
 import { Button } from '@/components/ui/button'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
