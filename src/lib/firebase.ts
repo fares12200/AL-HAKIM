@@ -31,10 +31,14 @@ export interface User {
   photoURL?: string | null;
 }
 
+// User-provided API key and Project ID as fallbacks
+const FALLBACK_API_KEY = "AIzaSyBctoFJW1hKPLZPgN18aOM96qRgp3N-rpc";
+const FALLBACK_PROJECT_ID = "al-hakim-41a51";
+
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || FALLBACK_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "al-hakim-41a51",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || FALLBACK_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
@@ -46,32 +50,63 @@ let dbInstance: Firestore | undefined;
 
 try {
   let configValid = true;
+
+  // Validate Project ID
   if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
-    console.warn( // Changed to warn as we provide a default now
-        "Firebase Project ID is not configured in .env.local, using default or provided ID."
-    );
-    if (firebaseConfig.projectId === "YOUR_PROJECT_ID") configValid = false;
-  }
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "AIzaSyBctoFJW1hKPLZPgN18aOM96qRgp3N-rpc") { // Check for specific placeholder
     console.error(
-        "Firebase API Key is not configured correctly. Please check your .env.local file and ensure NEXT_PUBLIC_FIREBASE_API_KEY is set to your actual Firebase API Key."
+      `Firebase Project ID is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_PROJECT_ID), set to the placeholder "YOUR_PROJECT_ID", or using the fallback "${FALLBACK_PROJECT_ID}". For a functional app, please provide a valid Project ID.`
     );
+    // Only mark as invalid if it's the generic "YOUR_PROJECT_ID" placeholder
+    if (firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+        configValid = false;
+    } else if (firebaseConfig.projectId === FALLBACK_PROJECT_ID && !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+        console.warn(`Using fallback Project ID: ${FALLBACK_PROJECT_ID}. Ensure this is the correct and intended project for your application.`);
+    }
+  }
+
+  // Validate API Key
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+    console.error(
+      `Firebase API Key is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_API_KEY), set to the placeholder "YOUR_API_KEY", or using the fallback "${FALLBACK_API_KEY}". For a functional app, please provide a valid API Key.`
+    );
+    // Only mark as invalid if it's the generic "YOUR_API_KEY" placeholder
+    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+        configValid = false;
+    } else if (firebaseConfig.apiKey === FALLBACK_API_KEY && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+        // This case means the user is relying on the hardcoded fallback API key.
+        // This specific fallback key is known to be a placeholder and will likely cause permission errors.
+        console.warn(
+            `Attempting to use the placeholder API key: ${FALLBACK_API_KEY}. This key is highly likely to result in 'PERMISSION_DENIED' or connection errors. For a functional app, please provide a valid Firebase API Key in your .env.local file as NEXT_PUBLIC_FIREBASE_API_KEY.`
+        );
+        // We allow configValid to remain true here, so initialization is attempted as per user's explicit request.
+        // The responsibility for using a working key lies with the user.
+    }
+  }
+  
+  // Validate Auth Domain
+  if (!firebaseConfig.authDomain) {
+    console.error("Firebase Auth Domain (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) is not configured in .env.local. This is required for authentication.");
     configValid = false;
   }
-  // Add checks for other critical config fields if necessary
+  
+  // Validate App ID
+  if (!firebaseConfig.appId) {
+    console.error("Firebase App ID (NEXT_PUBLIC_FIREBASE_APP_ID) is not configured in .env.local. This is required for some Firebase services.");
+    configValid = false;
+  }
+
 
   if (configValid) {
     app = initializeApp(firebaseConfig);
     authInstance = getFirebaseAuthInstance(app);
     dbInstance = getFirestoreInstance(app);
   } else {
-    console.error("Firebase initialization skipped due to invalid configuration.");
+    console.error("Firebase initialization skipped due to invalid or missing critical configuration. Please check your .env.local file and console logs.");
   }
 
 } catch (e: any) {
-  // Check if running in a browser environment before calling getApp() for duplicate app
   if (e.code === "app/duplicate-app" && typeof window !== 'undefined') {
-    app = getApp();
+    app = getApp(); // Get existing app instance if already initialized
     authInstance = getFirebaseAuthInstance(app);
     dbInstance = getFirestoreInstance(app);
   } else {
