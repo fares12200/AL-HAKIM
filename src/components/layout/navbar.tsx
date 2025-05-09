@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, LayoutDashboard, UserCog, Briefcase } from 'lucide-react';
+import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -46,9 +46,9 @@ export default function Navbar() {
     let dynamicLinks = [];
     if (user) {
       if (user.role === 'patient') {
-        dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, requiresAuth: true, roles: ['patient'] });
+        dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['patient'] });
       } else if (user.role === 'doctor') {
-        dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, requiresAuth: true, roles: ['doctor'] });
+        dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['doctor'] });
       }
     }
     return [...baseNavLinks, ...dynamicLinks].filter(link => {
