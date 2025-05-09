@@ -1,5 +1,5 @@
 
-import { db } from '@/lib/firebase'; // Import db to fetch doctor details
+import { db } from '@/lib/firebase'; 
 
 /**
  * Represents a doctor's profile.
@@ -32,11 +32,11 @@ export interface Doctor {
   /**
    * URL of the doctor's profile picture. This is the photo.
    */
-  imageUrl: string;
+  imageUrl?: string | null;
   /**
    * Brief description or bio.
    */
-  bio: string;
+  bio?: string | null;
   /**
    * Available time slots (example).
    */
@@ -44,23 +44,23 @@ export interface Doctor {
   /**
   * Doctor's contact phone number.
   */
-  phoneNumber?: string;
+  phoneNumber?: string | null;
   /**
    * Doctor's years of experience or a description of their experience. This is the experience.
    */
-  experience?: string;
+  experience?: string | null;
   /**
    * List of skills or special procedures the doctor offers. (e.g., comma-separated string)
    */
-  skills?: string;
+  skills?: string | null;
   /**
    * List of special equipment available at the clinic. (e.g., comma-separated string)
    */
-  equipment?: string;
+  equipment?: string | null;
   /**
    * The doctor's rating (out of 5). This is the rating.
    */
-  rating?: number;
+  rating?: number | null;
   // Add other fields consistent with what's stored in Firestore `users` collection for doctors
   email?: string;
   updatedAt?: string;
@@ -93,7 +93,8 @@ const mockCoordinates: { [key: string]: { lat: number; lng: number } } = {
  * @returns A promise that resolves to an array of Doctor objects.
  */
 export async function getDoctors(): Promise<Doctor[]> {
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
+  // Simulate API delay - Remove in production if Firestore is fast enough
+  // await new Promise(resolve => setTimeout(resolve, 500)); 
 
   try {
     const usersData = await db.getDocs('users');
@@ -105,10 +106,10 @@ export async function getDoctors(): Promise<Doctor[]> {
         specialty: userData.specialty || 'تخصص غير محدد',
         location: userData.location || 'موقع غير محدد',
         wilaya: userData.wilaya || 'ولاية غير محددة',
-        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates], // Fallback to mock for now
-        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userData.id.substring(0,10)}/300/300`,
+        coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates], 
+        imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userData.id?.substring(0,10) || 'doctor'}/400/250`,
         bio: userData.bio || 'لا توجد نبذة تعريفية.',
-        availableSlots: userData.availableSlots || ['09:00 ص', '10:00 ص', '11:00 ص', '02:00 م', '03:00 م'], // Default slots
+        availableSlots: userData.availableSlots || ['09:00 ص', '10:00 ص', '11:00 ص', '02:00 م', '03:00 م'],
         phoneNumber: userData.phoneNumber,
         experience: userData.experience || 'غير محدد',
         skills: userData.skills || 'غير محدد',
@@ -121,7 +122,9 @@ export async function getDoctors(): Promise<Doctor[]> {
     return doctorsFromDb;
   } catch (error) {
     console.error("Error fetching doctors from Firestore:", error);
-    return []; // Return empty array on error
+    // Depending on how you want to handle errors, you might re-throw or return a specific error object.
+    // For now, returning an empty array to prevent page crash, but logging the error.
+    throw error; // Re-throw to be caught by the calling page for user feedback
   }
 }
 
@@ -131,7 +134,7 @@ export async function getDoctors(): Promise<Doctor[]> {
  * @returns A promise that resolves to a Doctor object if found, or null if not found.
  */
 export async function getDoctor(id: string): Promise<Doctor | null> {
-  await new Promise(resolve => setTimeout(resolve, 300));
+  // await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API delay
   try {
     const userDoc = await db.getDoc(`users/${id}`);
     if (userDoc.exists()) {
@@ -144,7 +147,7 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
           location: userData.location || 'موقع غير محدد',
           wilaya: userData.wilaya || 'ولاية غير محددة',
           coordinates: userData.coordinates || mockCoordinates[userData.location as keyof typeof mockCoordinates],
-          imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userDoc.id.substring(0,10)}/300/300`,
+          imageUrl: userData.imageUrl || `https://picsum.photos/seed/${userDoc.id?.substring(0,10) || 'docprofile'}/400/300`,
           bio: userData.bio || 'لا توجد نبذة تعريفية.',
           availableSlots: userData.availableSlots || ['09:00 ص', '10:00 ص', '11:00 ص', '02:00 م', '03:00 م'],
           phoneNumber: userData.phoneNumber,
@@ -161,7 +164,7 @@ export async function getDoctor(id: string): Promise<Doctor | null> {
     return null;
   } catch (error) {
     console.error(`Error fetching doctor ${id} from Firestore:`, error);
-    return null;
+    return null; // Or re-throw, depending on error handling strategy
   }
 }
 
@@ -178,12 +181,12 @@ export async function getUniqueSpecialties(): Promise<string[]> {
     'العلاج الطبيعي', 'التغذية العلاجية',
   ];
   try {
-    const doctors = await getDoctors(); // This now fetches from Firestore
+    const doctors = await getDoctors(); 
     const dynamicSpecialties = doctors.map(doc => doc.specialty).filter(Boolean);
     return [...new Set([...predefinedSpecialties, ...dynamicSpecialties])].sort((a,b) => a.localeCompare(b, 'ar'));
   } catch (error) {
     console.error("Error fetching unique specialties:", error);
-    return predefinedSpecialties.sort((a,b) => a.localeCompare(b, 'ar')); // Fallback to predefined
+    return predefinedSpecialties.sort((a,b) => a.localeCompare(b, 'ar')); 
   }
 }
 
@@ -191,21 +194,15 @@ export function getAllAlgerianWilayas(): string[] {
   return algerianWilayas.sort((a,b) => a.localeCompare(b, 'ar'));
 }
 
-// Renamed from updateDoctorProfileInMock
 export async function updateDoctorProfile(uid: string, data: Partial<Doctor>) {
     const userDocPath = `users/${uid}`;
-    // Ensure that only fields relevant to Doctor profile are updated
-    // and avoid overwriting essential fields like email, role, createdAt if not explicitly provided
     const profileDataToSave = {
-        ...data, // New data from profile form
+        ...data, 
         updatedAt: new Date().toISOString(),
     };
-    // Remove fields that should not be directly updated by this function if they are undefined in `data`
     if (data.name === undefined) delete profileDataToSave.name;
-    if (data.email === undefined) delete profileDataToSave.email; // Email should typically be updated via auth service
-
-    await db.setDoc(userDocPath, profileDataToSave); // setDoc with merge:true is default in our db wrapper
+    if (data.email === undefined) delete profileDataToSave.email; 
+    await db.setDoc(userDocPath, profileDataToSave); 
 }
-// Keep the old name for compatibility if it's used elsewhere, but mark as deprecated or point to new one.
-// For now, I'll replace its usage in doctor profile page.
 export const updateDoctorProfileInMock = updateDoctorProfile;
+

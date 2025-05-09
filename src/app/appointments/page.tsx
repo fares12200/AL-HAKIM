@@ -2,7 +2,7 @@
 import { getDoctors, type Doctor, getUniqueSpecialties, getAllAlgerianWilayas } from '@/services/doctors';
 import DoctorCard from '@/components/doctors/doctor-card';
 import DoctorSearchFilters from '@/components/doctors/doctor-search-filters';
-import { MapPinned, SearchX } from 'lucide-react';
+import { MapPinned, SearchX, ServerCrash } from 'lucide-react';
 
 export const metadata = {
   title: 'البحث عن طبيب وحجز موعد - منصة الحكيم',
@@ -39,8 +39,16 @@ function deg2rad(deg: number): number {
 
 
 export default async function AppointmentsPage({ searchParams }: AppointmentsPageProps) {
-  const allDoctors: Doctor[] = await getDoctors();
-  const uniqueSpecialties = await getUniqueSpecialties();
+  let allDoctors: Doctor[] = [];
+  let fetchError = false;
+  try {
+    allDoctors = await getDoctors();
+  } catch (error) {
+    console.error("Failed to fetch doctors:", error);
+    fetchError = true;
+  }
+  
+  const uniqueSpecialties = await getUniqueSpecialties(); // This might also fail if DB connection is problematic
   const algerianWilayas = getAllAlgerianWilayas();
 
   let filteredDoctors = allDoctors;
@@ -93,8 +101,19 @@ export default async function AppointmentsPage({ searchParams }: AppointmentsPag
       <DoctorSearchFilters specialties={uniqueSpecialties} wilayas={algerianWilayas} />
 
       <section className="pb-16">
-        {filteredDoctors.length > 0 ? (
-          <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+        {fetchError ? (
+           <div className="text-center py-16 md:py-24 bg-card rounded-xl shadow-lg flex flex-col items-center justify-center">
+            <ServerCrash size={80} className="mx-auto text-destructive mb-8" strokeWidth={1.5}/>
+            <h2 className="text-3xl md:text-4xl font-semibold text-destructive mb-4">حدث خطأ</h2>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-md mx-auto leading-relaxed">
+              عفواً، لم نتمكن من تحميل قائمة الأطباء حالياً. قد يكون هناك مشكلة في الاتصال بالخادم.
+            </p>
+            <p className="text-md text-muted-foreground mt-3">
+              يرجى المحاولة مرة أخرى لاحقاً.
+            </p>
+          </div>
+        ) : filteredDoctors.length > 0 ? (
+          <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {filteredDoctors.map((doctor) => (
               <DoctorCard key={doctor.id} doctor={doctor} />
             ))}
@@ -115,3 +134,4 @@ export default async function AppointmentsPage({ searchParams }: AppointmentsPag
     </div>
   );
 }
+
