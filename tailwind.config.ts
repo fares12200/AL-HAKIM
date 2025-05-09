@@ -11,7 +11,7 @@ export default {
   theme: {
   	extend: {
       fontFamily: {
-        sans: ['var(--font-noto-arabic)', ...defaultTheme.fontFamily.sans],
+        sans: ['var(--font-araboto)', ...defaultTheme.fontFamily.sans], // Changed from --font-noto-arabic
       },
   		colors: {
   			background: 'hsl(var(--background))',
