@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${notoSansArabic.variable} font-sans antialiased flex flex-col min-h-screen`}>
+      <body className={`antialiased flex flex-col min-h-screen ${notoSansArabic.variable} font-sans`}>
         <AuthProvider>
           <Navbar />
           <main className="flex-grow container mx-auto px-4 py-8">
