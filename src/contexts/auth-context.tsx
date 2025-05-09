@@ -64,6 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              // For a newly signed up user, role might not be set yet in Firestore.
              // We might want to set a default or wait for Firestore doc creation.
              // For now, treat as partial user.
+            console.warn(`User document for UID ${firebaseUser.uid} not found in Firestore. Setting partial user object.`);
             setUser({ 
                 uid: firebaseUser.uid, 
                 email: firebaseUser.email, 
@@ -75,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             clearCookie('mockUserRole');
           }
         } catch (error) {
-            console.error("Error fetching user document from Firestore:", error);
+            console.error("Error fetching user document from Firestore during onAuthStateChanged:", error);
             setUser({ uid: firebaseUser.uid, email: firebaseUser.email, displayName: firebaseUser.displayName, photoURL: firebaseUser.photoURL }); // Fallback to auth data
             setCookie('mockAuthToken', 'true');
             clearCookie('mockUserRole');
@@ -139,25 +140,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
        if (userCredential && userCredential.user) {
         const firebaseUser = userCredential.user;
-        const userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
-        
+        let userDoc = await db.getDoc(`users/${firebaseUser.uid}`);
+        let userData: AppUser;
+        let userRoleToSet: 'patient' | 'doctor' = 'patient'; // Default role
+
         if (userDoc.exists()) {
-            const userData = userDoc.data() as AppUser;
-            const fullUser: AppUser = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: userData.name || firebaseUser.displayName,
-              role: userData.role,
-              photoURL: userData.photoURL || firebaseUser.photoURL,
-            };
-            setUser(fullUser);
-            setCookie('mockAuthToken', 'true');
-            setCookie('mockUserRole', userData.role || 'patient');
-            router.push(userData.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
+            userData = userDoc.data() as AppUser;
+            userRoleToSet = userData.role || 'patient';
         } else {
-            // Should not happen for a logged-in user if signup process is correct
-            throw new Error("User document not found in Firestore.");
+            console.warn(`User document for UID ${firebaseUser.uid} not found in Firestore. Creating a default one.`);
+            // Create a default user document in Firestore
+            const defaultUserData: AppUser & { createdAt: string } = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                name: firebaseUser.displayName || 'New User', // Use displayName from Auth or a default
+                role: 'patient', // Default role
+                photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid.substring(0,10)}/200/200`,
+                createdAt: new Date().toISOString(),
+            };
+            await db.setDoc(`users/${firebaseUser.uid}`, defaultUserData);
+            userData = defaultUserData; // Use the newly created data
+            userRoleToSet = defaultUserData.role;
         }
+        
+        const fullUser: AppUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: userData.name || firebaseUser.displayName,
+          role: userRoleToSet,
+          photoURL: userData.photoURL || firebaseUser.photoURL,
+        };
+        setUser(fullUser);
+        setCookie('mockAuthToken', 'true');
+        setCookie('mockUserRole', userRoleToSet);
+        router.push(userRoleToSet === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard');
       }
     } catch (error) {
       console.error("Log in error:", error);
@@ -215,3 +231,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
