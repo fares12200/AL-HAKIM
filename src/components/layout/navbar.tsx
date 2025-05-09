@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch, Bell, CheckCheck, XCircle, InfoIcon } from 'lucide-react';
+import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch, Bell, CheckCheck, XCircle, InfoIcon, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
@@ -31,17 +31,16 @@ export default function Navbar() {
   const { user, logOut, loading } = useAuth();
   const { 
     getNotificationsForUser, 
-    unreadCount, // This is now the unread count for the current user
+    unreadCount, 
     markAsRead, 
     markAllAsRead, 
     clearNotifications 
   } = useNotification();
-  const router = useRouter(); // Added for navigation
+  const router = useRouter(); 
   const [isMobile, setIsMobile] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Directly use unreadCount from the context, as it's already for the current user
   const currentUserUnreadCount = unreadCount;
 
 
@@ -63,10 +62,10 @@ export default function Navbar() {
     let dynamicLinks = [];
     if (user) {
       if (user.role === 'patient') {
-        dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['patient'] });
+        dynamicLinks.push({ href: '/patient/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, requiresAuth: true, roles: ['patient'] });
         dynamicLinks.push({ href: '/patient/appointments', label: 'مواعيدي', icon: CalendarSearch, requiresAuth: true, roles: ['patient'] });
       } else if (user.role === 'doctor') {
-        dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: Gauge, requiresAuth: true, roles: ['doctor'] });
+        dynamicLinks.push({ href: '/doctor/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard, requiresAuth: true, roles: ['doctor'] });
       }
     }
     return [...baseNavLinks, ...dynamicLinks].filter(link => {
@@ -75,6 +74,8 @@ export default function Navbar() {
       return false;
     });
   };
+
+  const navLinks = getNavLinks(); // Define navLinks here
   
   const ProfileLink = () => {
     if (!user) return null;
@@ -110,7 +111,7 @@ export default function Navbar() {
       case 'error':
         return <XCircle className="h-5 w-5 text-red-500" />;
       case 'warning':
-        return <InfoIcon className="h-5 w-5 text-yellow-500" />; // Or use AlertTriangle
+        return <InfoIcon className="h-5 w-5 text-yellow-500" />; 
       case 'info':
       default:
         return <InfoIcon className="h-5 w-5 text-blue-500" />;
@@ -171,7 +172,7 @@ export default function Navbar() {
               </DropdownMenuGroup>
             )}
           </ScrollArea>
-          {userNotifications.length > 0 && user && ( // Ensure user is not null for markAllAsRead and clearNotifications
+          {userNotifications.length > 0 && user && ( 
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup className="p-2">
@@ -230,7 +231,7 @@ export default function Navbar() {
       {user && !loading ? (
         isMobile ? (
            <>
-            {user && <NotificationMenu /> } {/* Added NotificationMenu for mobile */}
+            {user && <NotificationMenu /> } 
             <ProfileLink />
             <SheetClose asChild>
                 <Button variant="ghost" onClick={() => { logOut(); handleLinkClick();}} className="flex items-center justify-start gap-3 text-destructive hover:text-destructive/90 w-full text-md py-3 px-4 rounded-lg hover:bg-destructive/10">
@@ -357,3 +358,4 @@ export default function Navbar() {
     </header>
   );
 }
+
