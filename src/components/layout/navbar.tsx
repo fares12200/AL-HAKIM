@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, LayoutDashboard, UserCog, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import {
@@ -102,15 +102,16 @@ export default function Navbar() {
         ) : (
             <Link key={link.href} href={link.href} passHref>
             <Button variant="ghost" className="flex items-center justify-center gap-2 text-foreground hover:text-primary text-md px-4 py-2 rounded-lg">
-                {user && link.label === 'لوحة التحكم' && (
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png?size=24`} alt={user.displayName || 'User'} />
+                {user && link.href === (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard') && (
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png?size=28`} alt={user.displayName || 'User'} />
                     <AvatarFallback className="text-xs bg-primary/20 text-primary font-semibold">
                       {user.displayName?.[0]?.toUpperCase() || (user.email?.[0]?.toUpperCase() || 'U')}
                     </AvatarFallback>
                   </Avatar>
                 )}
-                <link.icon size={18} strokeWidth={1.5}/>
+               {!user && link.href === '/' &&  <link.icon size={18} strokeWidth={1.5}/> }
+               {user && link.href !== (user.role === 'doctor' ? '/doctor/dashboard' : '/patient/dashboard') && <link.icon size={18} strokeWidth={1.5}/> }
                 {link.label}
             </Button>
             </Link>
@@ -190,9 +191,9 @@ export default function Navbar() {
             </div>
           </Link>
           <div className="hidden md:flex items-center space-x-1 space-x-reverse">
-             <div className="w-24 h-10 bg-muted rounded-lg"></div>
-             <div className="w-28 h-10 bg-muted rounded-lg"></div>
-             <div className="w-36 h-10 bg-muted rounded-lg"></div>
+             <div className="w-24 h-10 bg-muted rounded-lg animate-pulse"></div>
+             <div className="w-28 h-10 bg-muted rounded-lg animate-pulse"></div>
+             <div className="w-36 h-10 bg-muted rounded-lg animate-pulse"></div>
           </div>
           <div className="md:hidden"> 
             <Button variant="ghost" size="icon" className="rounded-lg">
@@ -223,6 +224,7 @@ export default function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] bg-card flex flex-col p-6 shadow-xl rounded-l-xl">
+               <SheetTitle className="sr-only">القائمة الرئيسية</SheetTitle>
                <div className="flex items-center gap-2.5 text-primary mb-6 border-b pb-4">
                  <Stethoscope size={32} strokeWidth={1.5}/>
                  <h2 className="text-2xl font-bold">منصة الحكيم</h2>
