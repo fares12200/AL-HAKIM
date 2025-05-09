@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { CalendarDays, UserCog, ListChecks, Loader2, BriefcaseMedical, BarChart3, Users, Settings, AlertTriangle } from 'lucide-react';
-import { getAppointmentsForUser, type Appointment } from '@/services/appointments'; // Updated import
+import { getAppointmentsForUser, type Appointment } from '@/services/appointments'; 
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -29,12 +29,12 @@ export default function DoctorDashboardPage() {
       const fetchDoctorAppointments = async () => {
         setIsLoadingAppointments(true);
         try {
-          // Fetch appointments specifically for this doctor
+          
           const doctorAppointments = await getAppointmentsForUser(user.uid, 'doctor');
           setAppointments(doctorAppointments);
         } catch (error) {
           console.error("Error fetching doctor's appointments:", error);
-          // Consider adding a toast notification here for the user
+          
         } finally {
           setIsLoadingAppointments(false);
         }
@@ -66,7 +66,7 @@ export default function DoctorDashboardPage() {
         </p>
       </section>
 
-      {/* Quick Stats Section */}
+      
       <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
           <CardHeader className="pb-3">
@@ -104,7 +104,7 @@ export default function DoctorDashboardPage() {
       </section>
 
       <div className="grid lg:grid-cols-3 gap-6 md:gap-8">
-        {/* Upcoming Appointments Card */}
+        
         <Card className="lg:col-span-2 shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-2xl text-primary">
@@ -146,7 +146,7 @@ export default function DoctorDashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Actions Card */}
+        
         <div className="space-y-6 md:space-y-8">
             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-xl transform hover:-translate-y-1">
             <CardHeader>
@@ -160,6 +160,7 @@ export default function DoctorDashboardPage() {
                 <p className="text-muted-foreground mb-5">تحكم كامل في جدول مواعيدك وقم بإدارتها بكفاءة.</p>
                 <Link href="/doctor/appointments" passHref>
                 <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 text-md py-3 rounded-lg">
+                    <ListChecks size={18} className="mr-2 rtl:ml-2"/>
                     الذهاب إلى إدارة المواعيد
                 </Button>
                 </Link>
@@ -189,3 +190,4 @@ export default function DoctorDashboardPage() {
     </div>
   );
 }
+
