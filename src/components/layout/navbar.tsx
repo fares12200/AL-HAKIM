@@ -63,14 +63,14 @@ export default function Navbar() {
     if (!user) return null;
     const profilePath = user.role === 'doctor' ? `/doctor/profile` : `/patient/profile`;
     const profileLabel = user.role === 'doctor' ? 'الملف المهني' : 'الملف الشخصي';
-    const profileIcon = user.role === 'doctor' ? Briefcase : UserCog;
+    const ProfileSpecificIcon = user.role === 'doctor' ? Briefcase : UserCog; // Renamed to PascalCase
 
     return (
          isMobile ? (
             <SheetClose asChild>
                 <Link href={profilePath} passHref onClick={handleLinkClick}>
                 <Button variant="ghost" className="flex items-center justify-start gap-3 text-foreground hover:text-primary w-full text-md py-3 px-4 rounded-lg">
-                    <profileIcon size={20} strokeWidth={1.5}/>
+                    <ProfileSpecificIcon size={20} strokeWidth={1.5}/>
                     {profileLabel}
                 </Button>
                 </Link>
@@ -79,7 +79,7 @@ export default function Navbar() {
             <Link href={profilePath} passHref>
                 <DropdownMenuItem className="justify-end cursor-pointer text-md py-2.5 px-3">
                 {profileLabel}
-                <profileIcon className="ml-2 h-5 w-5" strokeWidth={1.5}/>
+                <ProfileSpecificIcon className="ml-2 h-5 w-5" strokeWidth={1.5}/>
                 </DropdownMenuItem>
             </Link>
          )
