@@ -21,6 +21,9 @@ import {
   type DocumentData,
   type Firestore,
   type Auth as FirebaseAuth,
+  type DocumentSnapshot,
+  type Unsubscribe,
+  type UserCredential,
 } from 'firebase/firestore';
 
 export interface User {
@@ -51,48 +54,38 @@ let dbInstance: Firestore | undefined;
 try {
   let configValid = true;
 
-  // Validate Project ID
-  if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+  if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID" || firebaseConfig.projectId === "") {
     console.error(
-      `Firebase Project ID is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_PROJECT_ID), set to the placeholder "YOUR_PROJECT_ID", or using the fallback "${FALLBACK_PROJECT_ID}". For a functional app, please provide a valid Project ID.`
+      `Firebase Project ID is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_PROJECT_ID), set to the placeholder "YOUR_PROJECT_ID", empty, or using the fallback "${FALLBACK_PROJECT_ID}". For a functional app, please provide a valid Project ID.`
     );
-    // Only mark as invalid if it's the generic "YOUR_PROJECT_ID" placeholder
-    if (firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+    if (firebaseConfig.projectId === "YOUR_PROJECT_ID" || firebaseConfig.projectId === "") {
         configValid = false;
     } else if (firebaseConfig.projectId === FALLBACK_PROJECT_ID && !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
         console.warn(`Using fallback Project ID: ${FALLBACK_PROJECT_ID}. Ensure this is the correct and intended project for your application.`);
     }
   }
 
-  // Validate API Key
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "") {
     console.error(
-      `Firebase API Key is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_API_KEY), set to the placeholder "YOUR_API_KEY", or using the fallback "${FALLBACK_API_KEY}". For a functional app, please provide a valid API Key.`
+      `Firebase API Key is not configured correctly. It's either missing in .env.local (NEXT_PUBLIC_FIREBASE_API_KEY), set to the placeholder "YOUR_API_KEY", empty, or using the fallback. For a functional app, please provide a valid API Key.`
     );
-    // Only mark as invalid if it's the generic "YOUR_API_KEY" placeholder
-    if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+    if (firebaseConfig.apiKey === "YOUR_API_KEY" || firebaseConfig.apiKey === "") {
         configValid = false;
     } else if (firebaseConfig.apiKey === FALLBACK_API_KEY && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-        // This case means the user is relying on the hardcoded fallback API key.
-        // This specific fallback key is known to be a placeholder and will likely cause permission errors.
         console.warn(
-            `Attempting to use the placeholder API key: ${FALLBACK_API_KEY}. This key is highly likely to result in 'PERMISSION_DENIED' or connection errors. For a functional app, please provide a valid Firebase API Key in your .env.local file as NEXT_PUBLIC_FIREBASE_API_KEY.`
+            `Using placeholder API key: ${FALLBACK_API_KEY}. This key is likely to result in 'PERMISSION_DENIED' or connection errors. For a functional app, please provide a valid Firebase API Key in your .env.local file as NEXT_PUBLIC_FIREBASE_API_KEY.`
         );
-        // We allow configValid to remain true here, so initialization is attempted as per user's explicit request.
-        // The responsibility for using a working key lies with the user.
     }
   }
   
-  // Validate Auth Domain
   if (!firebaseConfig.authDomain) {
-    console.error("Firebase Auth Domain (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) is not configured in .env.local. This is required for authentication.");
-    configValid = false;
+    console.warn("Firebase Auth Domain (NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) is not configured in .env.local. This may be required for authentication in some environments.");
+    // configValid = false; // Not strictly critical for all Firestore operations but good for auth
   }
   
-  // Validate App ID
   if (!firebaseConfig.appId) {
-    console.error("Firebase App ID (NEXT_PUBLIC_FIREBASE_APP_ID) is not configured in .env.local. This is required for some Firebase services.");
-    configValid = false;
+    console.warn("Firebase App ID (NEXT_PUBLIC_FIREBASE_APP_ID) is not configured in .env.local. This may be required for some Firebase services.");
+    // configValid = false; // Not strictly critical
   }
 
 
@@ -106,23 +99,21 @@ try {
 
 } catch (e: any) {
   if (e.code === "app/duplicate-app" && typeof window !== 'undefined') {
-    app = getApp(); // Get existing app instance if already initialized
+    app = getApp(); 
     authInstance = getFirebaseAuthInstance(app);
     dbInstance = getFirestoreInstance(app);
   } else {
     console.error("Firebase initialization error:", e.message, e.stack);
-    // app, authInstance, dbInstance will remain undefined
   }
 }
 
-// Exported auth object
 export const auth = {
-  createUserWithEmailAndPassword: async (email?: string, password?: string): Promise<{ user: FirebaseUserType }> => {
+  createUserWithEmailAndPassword: async (email?: string, password?: string): Promise<UserCredential> => {
     if (!authInstance) throw new Error("Firebase Auth is not initialized. Check configuration and console logs.");
     if (!email || !password) throw new Error('Email and password are required.');
     return fbCreateUserWithEmailAndPassword(authInstance, email, password);
   },
-  signInWithEmailAndPassword: async (email?: string, password?: string): Promise<{ user: FirebaseUserType }> => {
+  signInWithEmailAndPassword: async (email?: string, password?: string): Promise<UserCredential> => {
     if (!authInstance) throw new Error("Firebase Auth is not initialized. Check configuration and console logs.");
     if (!email || !password) throw new Error('Email and password are required.');
     return fbSignInWithEmailAndPassword(authInstance, email, password);
@@ -131,10 +122,10 @@ export const auth = {
     if (!authInstance) throw new Error("Firebase Auth is not initialized. Check configuration and console logs.");
     return fbSignOut(authInstance);
   },
-  onAuthStateChanged: (callback: (user: FirebaseUserType | null) => void): (() => void) => {
+  onAuthStateChanged: (callback: (user: FirebaseUserType | null) => void): Unsubscribe => {
     if (!authInstance) {
       console.warn("Firebase Auth is not initialized. onAuthStateChanged will not be effective.");
-      return () => {}; // Return a no-op unsubscribe function
+      return () => {}; 
     }
     return fbOnAuthStateChanged(authInstance, callback);
   },
@@ -145,14 +136,12 @@ export const auth = {
   },
   getCurrentUser: (): FirebaseUserType | null => {
     if (!authInstance) {
-      // console.warn("Firebase Auth is not initialized. getCurrentUser will return null.");
       return null;
     }
     return authInstance.currentUser;
   }
 };
 
-// Exported db object
 export const db = {
   setDoc: async (path: string, data: DocumentData): Promise<void> => {
     if (!dbInstance) throw new Error("Firestore is not initialized. Check configuration and console logs.");
@@ -161,12 +150,12 @@ export const db = {
     const docRef = doc(dbInstance, collectionName, docId);
     await fbSetDoc(docRef, data, { merge: true });
   },
-  getDoc: async (path: string): Promise<{ exists: () => boolean; data: () => DocumentData | undefined, id: string }> => {
+  getDoc: async (path: string): Promise<{ exists: () => boolean; data: () => DocumentData | undefined; id: string }> => {
     if (!dbInstance) throw new Error("Firestore is not initialized. Check configuration and console logs.");
     const [collectionName, docId] = path.split('/');
     if (!collectionName || !docId) throw new Error("Invalid path for getDoc. Must be 'collectionName/docId'.");
     const docRef = doc(dbInstance, collectionName, docId);
-    const docSnap = await fbGetDoc(docRef);
+    const docSnap: DocumentSnapshot<DocumentData> = await fbGetDoc(docRef);
     return {
       exists: () => docSnap.exists(),
       data: () => docSnap.data(),
@@ -189,5 +178,8 @@ export const db = {
     return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
   }
 };
+
+// Export the raw Firestore instance for direct SDK use if needed
+export const firestore: Firestore | undefined = dbInstance;
 
 export type { FirebaseUserType };

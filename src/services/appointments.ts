@@ -1,6 +1,18 @@
 
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, doc, getDoc, updateDoc, deleteDoc, query, where, serverTimestamp } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase'; // Use the exported Firestore instance
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  doc, 
+  getDoc as fbGetDoc, // Renamed to avoid conflict if service had its own getDoc
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  serverTimestamp,
+  type Timestamp // Import Timestamp for type safety if needed for createdAt/updatedAt
+} from 'firebase/firestore';
 
 /**
  * Represents an appointment.
@@ -41,11 +53,11 @@ export interface Appointment {
   /**
    * Timestamp of when the appointment was created.
    */
-  createdAt?: any; // Firestore ServerTimestamp
+  createdAt?: Timestamp | Date | any; // Firestore ServerTimestamp or Date
    /**
    * Timestamp of when the appointment was last updated.
    */
-  updatedAt?: any; // Firestore ServerTimestamp
+  updatedAt?: Timestamp | Date | any; // Firestore ServerTimestamp or Date
 }
 
 /**
@@ -53,8 +65,9 @@ export interface Appointment {
  * @returns A promise that resolves to an array of Appointment objects.
  */
 export async function getAllAppointments(): Promise<Appointment[]> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentsCol = collection(db, 'appointments');
+    const appointmentsCol = collection(firestore, 'appointments');
     const appointmentSnapshot = await getDocs(appointmentsCol);
     const appointmentsList = appointmentSnapshot.docs.map(docSnap => ({
       id: docSnap.id,
@@ -75,8 +88,9 @@ export async function getAllAppointments(): Promise<Appointment[]> {
  * @returns A promise that resolves to an array of Appointment objects.
  */
 export async function getAppointmentsForUser(id: string, userType: 'doctor' | 'patient'): Promise<Appointment[]> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentsCol = collection(db, 'appointments');
+    const appointmentsCol = collection(firestore, 'appointments');
     const fieldToQuery = userType === 'doctor' ? 'doctorId' : 'patientId';
     const q = query(appointmentsCol, where(fieldToQuery, '==', id));
     const appointmentSnapshot = await getDocs(q);
@@ -100,9 +114,10 @@ export async function getAppointmentsForUser(id: string, userType: 'doctor' | 'p
  * @returns A promise that resolves to an Appointment object if found, or null if not found.
  */
 export async function getAppointment(id: string): Promise<Appointment | null> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentDocRef = doc(db, 'appointments', id);
-    const appointmentSnap = await getDoc(appointmentDocRef);
+    const appointmentDocRef = doc(firestore, 'appointments', id);
+    const appointmentSnap = await fbGetDoc(appointmentDocRef);
     if (appointmentSnap.exists()) {
       return { id: appointmentSnap.id, ...appointmentSnap.data() } as Appointment;
     }
@@ -119,16 +134,24 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
  * @param appointmentData The data for the appointment to create (excluding ID).
  * @returns A promise that resolves to the created Appointment object with its new ID.
  */
-export async function createAppointment(appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>): Promise<Appointment> {
+export async function createAppointment(appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<Appointment> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentsCol = collection(db, 'appointments');
-    const docRef = await addDoc(appointmentsCol, {
+    const appointmentsCol = collection(firestore, 'appointments');
+    const newAppointmentPayload = {
       ...appointmentData,
-      status: 'pending', // Default status
+      status: 'pending' as const, // Default status
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
-    return { ...appointmentData, id: docRef.id, status: 'pending' } as Appointment; // Return with ID
+    };
+    const docRef = await addDoc(appointmentsCol, newAppointmentPayload);
+    return { 
+        ...appointmentData, 
+        id: docRef.id, 
+        status: 'pending', 
+        // Note: serverTimestamp() resolves on the server, so createdAt/updatedAt will be populated after retrieval
+        // For immediate client-side use, you might use new Date() if a server timestamp isn't strictly needed right away.
+    } as Appointment; 
   } catch (error) {
     console.error("Error creating appointment:", error);
     throw error;
@@ -142,8 +165,9 @@ export async function createAppointment(appointmentData: Omit<Appointment, 'id' 
  * @returns A promise that resolves when the update is complete.
  */
 export async function updateAppointmentStatus(appointmentId: string, status: 'pending' | 'confirmed' | 'cancelled' | 'completed'): Promise<void> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentDocRef = doc(db, 'appointments', appointmentId);
+    const appointmentDocRef = doc(firestore, 'appointments', appointmentId);
     await updateDoc(appointmentDocRef, {
       status: status,
       updatedAt: serverTimestamp(),
@@ -161,8 +185,9 @@ export async function updateAppointmentStatus(appointmentId: string, status: 'pe
  * @returns A promise that resolves when the deletion is complete.
  */
 export async function deleteAppointment(appointmentId: string): Promise<void> {
+  if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
   try {
-    const appointmentDocRef = doc(db, 'appointments', appointmentId);
+    const appointmentDocRef = doc(firestore, 'appointments', appointmentId);
     await deleteDoc(appointmentDocRef);
   } catch (error) {
     console.error(`Error deleting appointment ${appointmentId}:`, error);
