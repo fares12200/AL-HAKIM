@@ -11,6 +11,7 @@ import { CalendarDays, UserCog, ListChecks, Loader2, BriefcaseMedical, BarChart3
 import { getAppointmentsForUser, type Appointment } from '@/services/appointments'; // Updated import
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 
 export default function DoctorDashboardPage() {
