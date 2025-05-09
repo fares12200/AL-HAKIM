@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { CalendarDays, UserCog, ListChecks, Loader2, BriefcaseMedical, BarChart3, Users, Settings, AlertTriangle } from 'lucide-react';
-import { getAppointments, type Appointment } from '@/services/appointments';
+import { getAppointmentsForUser, type Appointment } from '@/services/appointments'; // Updated import
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 
@@ -27,9 +28,8 @@ export default function DoctorDashboardPage() {
       const fetchDoctorAppointments = async () => {
         setIsLoadingAppointments(true);
         try {
-          const allAppointments = await getAppointments();
-          const doctorAppointments = allAppointments.filter(app => app.doctorId === user.uid)
-                                       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.time.localeCompare(b.time));
+          // Fetch appointments specifically for this doctor
+          const doctorAppointments = await getAppointmentsForUser(user.uid, 'doctor');
           setAppointments(doctorAppointments);
         } catch (error) {
           console.error("Error fetching doctor's appointments:", error);
@@ -51,8 +51,8 @@ export default function DoctorDashboardPage() {
     );
   }
 
-  const upcomingAppointments = appointments.filter(app => new Date(app.date) >= new Date()).slice(0, 5);
-  const totalAppointmentsToday = appointments.filter(app => format(new Date(app.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')).length;
+  const upcomingAppointments = appointments.filter(app => new Date(app.date) >= new Date() && app.status !== 'completed' && app.status !== 'cancelled').slice(0, 5);
+  const totalAppointmentsToday = appointments.filter(app => format(new Date(app.date), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && app.status !== 'cancelled').length;
 
 
   return (
@@ -121,9 +121,13 @@ export default function DoctorDashboardPage() {
               <ul className="space-y-3">
                 {upcomingAppointments.map(app => (
                   <li key={app.id} className="text-md p-3 border rounded-lg bg-muted/50 flex justify-between items-center hover:bg-muted/70 transition-colors">
-                    <span>{format(new Date(app.date), 'eeee, d MMM yyyy', {locale: arSA})} - الساعة {app.time}</span>
-                    {/* Consider fetching patient name here with a small spinner */}
-                    <span className="text-sm text-muted-foreground">(مع المريض: {app.patientId.substring(0,8)}...)</span>
+                    <div>
+                        <span className="font-medium">{format(new Date(app.date), 'eeee, d MMM yyyy', {locale: arSA})} - الساعة {app.time}</span>
+                        <span className="block text-sm text-muted-foreground mt-0.5">(مع المريض: {app.patientName || app.patientId.substring(0,8)+'...' })</span>
+                    </div>
+                    <Badge variant={app.status === 'confirmed' ? 'default' : 'secondary'} className="text-xs">
+                        {app.status === 'confirmed' ? 'مؤكد' : 'قيد المراجعة'}
+                    </Badge>
                   </li>
                 ))}
               </ul>

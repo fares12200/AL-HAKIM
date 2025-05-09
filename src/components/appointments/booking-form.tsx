@@ -37,6 +37,7 @@ import { CalendarIcon, Clock, User, StickyNote, Send, Loader2 } from 'lucide-rea
 import { useToast } from '@/hooks/use-toast';
 import { createAppointment, type Appointment } from '@/services/appointments';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context'; // Import useAuth
 
 const bookingFormSchema = z.object({
   patientName: z.string().min(2, { message: 'يجب إدخال اسم المريض (حرفين على الأقل).' }).max(60, "الاسم طويل جدًا."),
@@ -53,6 +54,7 @@ interface BookingFormProps {
 
 export default function BookingForm({ doctor }: BookingFormProps) {
   const { toast } = useToast();
+  const { user } = useAuth(); // Get user from AuthContext
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
@@ -64,34 +66,48 @@ export default function BookingForm({ doctor }: BookingFormProps) {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      patientName: '',
+      patientName: user?.displayName || '', // Pre-fill name if user is logged in
       notes: '',
     },
   });
 
+  // Update default patientName if user logs in/out while form is mounted
+  useEffect(() => {
+    if (user?.displayName && form.getValues('patientName') !== user.displayName) {
+        form.setValue('patientName', user.displayName);
+    } else if (!user && form.getValues('patientName')) {
+        // Optionally clear name if user logs out, or leave as is
+        // form.setValue('patientName', ''); 
+    }
+  }, [user, form]);
+
   async function onSubmit(data: BookingFormValues) {
     setIsSubmitting(true);
     try {
-      const newAppointmentData: Omit<Appointment, 'id' | 'patientId'> = {
+      const patientIdToUse = user?.uid || 'anonymous_' + Math.random().toString(36).substring(2, 9);
+
+      // Data to be saved in Firestore
+      const newAppointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'status'> = {
         doctorId: doctor.id,
+        patientId: patientIdToUse,
+        patientName: data.patientName, // Save patient's name from form
         date: format(data.appointmentDate, 'yyyy-MM-dd'),
         time: data.appointmentTime,
+        notes: data.notes || '',
       };
-
-      const created = await createAppointment({
-        ...newAppointmentData,
-        id: Math.random().toString(36).substring(2, 9),
-        patientId: 'mockPatient' + Math.random().toString(36).substring(2, 7),
-      } as Appointment);
+      
+      // `status`, `createdAt`, `updatedAt` will be set by createAppointment service
+      const createdAppointment = await createAppointment(newAppointmentData);
       
       toast({
         title: 'تم الحجز بنجاح!',
-        description: `تم تأكيد موعدك مع د. ${doctor.name} يوم ${format(data.appointmentDate, 'PPPP', { locale: arSA })} الساعة ${data.appointmentTime}.`,
+        description: `تم تأكيد موعدك مع د. ${doctor.name} يوم ${format(data.appointmentDate, 'PPPP', { locale: arSA })} الساعة ${data.appointmentTime}. رقم الموعد: ${createdAppointment.id.substring(0,6)}`,
         variant: 'default',
         className: 'bg-green-500 text-white border-green-600', 
       });
-      form.reset();
+      form.reset({ patientName: user?.displayName || '', notes: '', appointmentDate: undefined, appointmentTime: undefined });
     } catch (error) {
+        console.error("Booking error:", error);
       toast({
         title: 'خطأ في الحجز',
         description: 'حدث خطأ أثناء محاولة حجز الموعد. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
@@ -168,7 +184,7 @@ export default function BookingForm({ doctor }: BookingFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-lg flex items-center gap-2"><Clock size={20} className="text-muted-foreground"/> وقت الموعد</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger className="py-3.5 text-base rounded-md">
                        <Clock className="ml-2 h-5 w-5 opacity-70" />
