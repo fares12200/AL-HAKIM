@@ -295,3 +295,4 @@ export default function BookingForm({ doctor }: BookingFormProps) {
     </Form>
   );
 }
+
