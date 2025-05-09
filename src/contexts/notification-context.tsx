@@ -1,8 +1,8 @@
-
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { useAuth } from './auth-context'; // Import useAuth
 
 export interface Notification {
   id: string;
@@ -16,7 +16,7 @@ export interface Notification {
 
 interface NotificationContextType {
   notifications: Notification[];
-  unreadCount: number;
+  unreadCount: number; // Will be the count for the logged-in user
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markAsRead: (notificationId: string) => void;
   markAllAsRead: (recipientId: string) => void;
@@ -30,7 +30,7 @@ const NOTIFICATIONS_STORAGE_KEY = 'appNotifications';
 
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // To filter notifications
+  const { user: authUser } = useAuth(); // Get user from AuthContext
 
   // Load notifications from localStorage on initial mount
   useEffect(() => {
@@ -53,14 +53,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [notifications]);
 
-  // This would typically come from AuthContext
-  useEffect(() => {
-    // Simulate getting current user ID. In a real app, integrate with AuthContext.
-    // For now, let's assume there's a way to get it.
-    // If you have AuthContext, you can listen to user changes here.
-    // const { user } = useAuth(); // Example
-    // setCurrentUserId(user?.uid || null);
-  }, []);
+  const getNotificationsForUser = useCallback((recipientId: string): Notification[] => {
+    return notifications
+      .filter(n => n.recipientId === recipientId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [notifications]);
+
+  const unreadCountForCurrentUser = useMemo(() => {
+    if (!authUser?.uid) return 0;
+    return getNotificationsForUser(authUser.uid).filter(n => !n.read).length;
+  }, [authUser, notifications, getNotificationsForUser]);
 
 
   const addNotification = useCallback((notificationData: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
@@ -79,20 +81,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
   
-  const getNotificationsForUser = useCallback((recipientId: string): Notification[] => {
-    return notifications
-      .filter(n => n.recipientId === recipientId)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [notifications]);
-
-  const unreadCount = useCallback((recipientId: string): number => {
-    return getNotificationsForUser(recipientId).filter(n => !n.read).length;
-  }, [getNotificationsForUser]);
-
 
   const markAllAsRead = useCallback((recipientId: string) => {
     setNotifications(prevNotifications =>
-      prevNotifications.map(n => (n.recipientId === recipientId ? { ...n, read: true } : n))
+      prevNotifications.map(n => (n.recipientId === recipientId && !n.read ? { ...n, read: true } : n))
     );
   }, []);
 
@@ -103,12 +95,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   return (
     <NotificationContext.Provider value={{ 
         notifications, 
-        // This needs to be dynamic based on logged-in user
-        get unreadCount() { return currentUserId ? unreadCount(currentUserId) : 0; },
+        unreadCount: unreadCountForCurrentUser,
         addNotification, 
         markAsRead, 
-        markAllAsRead: (userId) => markAllAsRead(userId), 
-        clearNotifications: (userId) => clearNotifications(userId),
+        markAllAsRead, 
+        clearNotifications,
         getNotificationsForUser
     }}>
       {children}

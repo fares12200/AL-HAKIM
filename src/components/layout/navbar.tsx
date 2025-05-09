@@ -1,4 +1,3 @@
-
 'use client';
 import Link from 'next/link';
 import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, Gauge, UserCog, Briefcase, CalendarSearch, Bell, CheckCheck, XCircle, InfoIcon } from 'lucide-react';
@@ -21,6 +20,7 @@ import { useNotification, type Notification } from '@/contexts/notification-cont
 import { formatDistanceToNow } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useRouter } from 'next/navigation'; // Added for notification link navigation
 
 const baseNavLinks = [
   { href: '/', label: 'الرئيسية', icon: Home, requiresAuth: false, roles: ['patient', 'doctor', null] },
@@ -29,13 +29,20 @@ const baseNavLinks = [
 
 export default function Navbar() {
   const { user, logOut, loading } = useAuth();
-  const { getNotificationsForUser, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotification();
+  const { 
+    getNotificationsForUser, 
+    unreadCount, // This is now the unread count for the current user
+    markAsRead, 
+    markAllAsRead, 
+    clearNotifications 
+  } = useNotification();
+  const router = useRouter(); // Added for navigation
   const [isMobile, setIsMobile] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const userNotifications = user ? getNotificationsForUser(user.uid) : [];
-  const currentUserUnreadCount = user ? unreadCount : 0;
+  // Directly use unreadCount from the context, as it's already for the current user
+  const currentUserUnreadCount = unreadCount;
 
 
   useEffect(() => {
@@ -69,8 +76,6 @@ export default function Navbar() {
     });
   };
   
-  const navLinks = getNavLinks();
-
   const ProfileLink = () => {
     if (!user) return null;
     const profilePath = user.role === 'doctor' ? `/doctor/profile` : `/patient/profile`;
@@ -114,6 +119,7 @@ export default function Navbar() {
 
   const NotificationMenu = () => {
     if (!user) return null;
+    const userNotifications = getNotificationsForUser(user.uid);
 
     return (
       <DropdownMenu>
@@ -165,7 +171,7 @@ export default function Navbar() {
               </DropdownMenuGroup>
             )}
           </ScrollArea>
-          {userNotifications.length > 0 && (
+          {userNotifications.length > 0 && user && ( // Ensure user is not null for markAllAsRead and clearNotifications
             <>
               <DropdownMenuSeparator />
               <DropdownMenuGroup className="p-2">
@@ -224,6 +230,7 @@ export default function Navbar() {
       {user && !loading ? (
         isMobile ? (
            <>
+            {user && <NotificationMenu /> } {/* Added NotificationMenu for mobile */}
             <ProfileLink />
             <SheetClose asChild>
                 <Button variant="ghost" onClick={() => { logOut(); handleLinkClick();}} className="flex items-center justify-start gap-3 text-destructive hover:text-destructive/90 w-full text-md py-3 px-4 rounded-lg hover:bg-destructive/10">
@@ -337,7 +344,6 @@ export default function Navbar() {
                  <h2 className="text-2xl font-bold">منصة الحكيم</h2>
                </div>
               <nav className="flex flex-col space-y-3 mt-2">
-                {user && <NotificationMenu /> }
                 <NavContent />
               </nav>
             </SheetContent>
@@ -351,4 +357,3 @@ export default function Navbar() {
     </header>
   );
 }
-
