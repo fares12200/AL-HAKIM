@@ -16,26 +16,34 @@ import { NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isAuthenticated = request.cookies.get('mockAuthToken')?.value === 'true'; // Example: check for a mock auth cookie
-  const userRole = request.cookies.get('mockUserRole')?.value; // Example: 'patient' or 'doctor'
+  const isAuthenticated = request.cookies.get('mockAuthToken')?.value === 'true'; 
+  const userRole = request.cookies.get('mockUserRole')?.value; 
+
+  const loginUrl = new URL('/auth/login', request.url);
+  loginUrl.searchParams.set('redirect', pathname); // Always set redirect for convenience
+
+  // Specific check for booking page if not authenticated
+  if (pathname.startsWith('/appointments/book/') && !isAuthenticated) {
+    loginUrl.searchParams.set('message', 'يرجى تسجيل الدخول أو إنشاء حساب لحجز موعد.');
+    return NextResponse.redirect(loginUrl);
+  }
 
   // Redirect to login if trying to access protected routes and not authenticated
   if ((pathname.startsWith('/patient') || pathname.startsWith('/doctor')) && !isAuthenticated) {
-    const loginUrl = new URL('/auth/login', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
     loginUrl.searchParams.set('message', 'يرجى تسجيل الدخول للمتابعة.');
     return NextResponse.redirect(loginUrl);
   }
+  
 
   // Role-based access control
   if (isAuthenticated) {
     if (pathname.startsWith('/patient') && userRole !== 'patient') {
-      const deniedUrl = new URL('/auth/login', request.url);
+      const deniedUrl = new URL('/auth/login', request.url); // Or a generic access-denied page
       deniedUrl.searchParams.set('message', 'الوصول مرفوض. هذه الصفحة مخصصة للمرضى.');
       return NextResponse.redirect(deniedUrl);
     }
     if (pathname.startsWith('/doctor') && userRole !== 'doctor') {
-       const deniedUrl = new URL('/auth/login', request.url);
+       const deniedUrl = new URL('/auth/login', request.url); // Or a generic access-denied page
       deniedUrl.searchParams.set('message', 'الوصول مرفوض. هذه الصفحة مخصصة للأطباء.');
       return NextResponse.redirect(deniedUrl);
     }

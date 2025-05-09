@@ -33,11 +33,13 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
-import { CalendarIcon, Clock, User, StickyNote, Send, Loader2 } from 'lucide-react';
+import { CalendarIcon, Clock, User, StickyNote, Send, Loader2, LogIn, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createAppointment, type Appointment } from '@/services/appointments';
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth-context'; // Import useAuth
+import { useAuth } from '@/contexts/auth-context';
+import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const bookingFormSchema = z.object({
   patientName: z.string().min(2, { message: 'يجب إدخال اسم المريض (حرفين على الأقل).' }).max(60, "الاسم طويل جدًا."),
@@ -54,7 +56,7 @@ interface BookingFormProps {
 
 export default function BookingForm({ doctor }: BookingFormProps) {
   const { toast } = useToast();
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user, loading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
@@ -66,37 +68,39 @@ export default function BookingForm({ doctor }: BookingFormProps) {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      patientName: user?.displayName || '', // Pre-fill name if user is logged in
+      patientName: '', // Will be set by useEffect
       notes: '',
     },
   });
 
-  // Update default patientName if user logs in/out while form is mounted
   useEffect(() => {
-    if (user?.displayName && form.getValues('patientName') !== user.displayName) {
+    if (user?.displayName) {
         form.setValue('patientName', user.displayName);
-    } else if (!user && form.getValues('patientName')) {
-        // Optionally clear name if user logs out, or leave as is
-        // form.setValue('patientName', ''); 
+    } else {
+        form.setValue('patientName', ''); // Clear if no user or no display name
     }
   }, [user, form]);
 
   async function onSubmit(data: BookingFormValues) {
+    if (!user) {
+      toast({
+        title: 'مطلوب تسجيل الدخول',
+        description: 'يرجى تسجيل الدخول أو إنشاء حساب جديد لتتمكن من حجز موعد.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const patientIdToUse = user?.uid || 'anonymous_' + Math.random().toString(36).substring(2, 9);
-
-      // Data to be saved in Firestore
       const newAppointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'status'> = {
         doctorId: doctor.id,
-        patientId: patientIdToUse,
-        patientName: data.patientName, // Save patient's name from form
+        patientId: user.uid, // Use authenticated user's ID
+        patientName: data.patientName, 
         date: format(data.appointmentDate, 'yyyy-MM-dd'),
         time: data.appointmentTime,
         notes: data.notes || '',
       };
       
-      // `status`, `createdAt`, `updatedAt` will be set by createAppointment service
       const createdAppointment = await createAppointment(newAppointmentData);
       
       toast({
@@ -118,6 +122,46 @@ export default function BookingForm({ doctor }: BookingFormProps) {
     }
   }
 
+  if (authLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 rounded-xl shadow-xl bg-card min-h-[300px]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-lg text-muted-foreground">جاري تحميل معلومات المصادقة...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card className="text-center p-8 md:p-12 rounded-xl shadow-xl bg-card border-primary/30">
+         <CardHeader className="p-0">
+            <AlertTriangle size={64} className="mx-auto text-destructive mb-6" strokeWidth={1.5}/>
+            <CardTitle className="text-2xl md:text-3xl font-bold text-primary mb-3">
+                مطلوب تسجيل الدخول للحجز
+            </CardTitle>
+            <CardDescription className="text-md md:text-lg text-muted-foreground max-w-md mx-auto leading-relaxed">
+                لتتمكن من حجز موعد مع د. {doctor.name}، يرجى تسجيل الدخول إلى حسابك أو إنشاء حساب جديد إذا لم يكن لديك واحد.
+            </CardDescription>
+         </CardHeader>
+         <CardContent className="p-0 mt-8">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-lg py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+                    <Link href={`/auth/login?redirect=/appointments/book/${doctor.id}`}>
+                        <LogIn size={20} className="mr-2 rtl:ml-2"/>
+                        تسجيل الدخول
+                    </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="text-primary border-primary hover:bg-primary/10 text-lg py-3 px-8 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    <Link href={`/auth/signup?redirect=/appointments/book/${doctor.id}`}>
+                        إنشاء حساب جديد
+                    </Link>
+                </Button>
+            </div>
+         </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -128,8 +172,16 @@ export default function BookingForm({ doctor }: BookingFormProps) {
             <FormItem>
               <FormLabel className="text-lg flex items-center gap-2"><User size={20} className="text-muted-foreground"/> اسم المريض</FormLabel>
               <FormControl>
-                <Input placeholder="الاسم الكامل كما هو في الهوية" {...field} className="py-3.5 text-base rounded-md"/>
+                <Input 
+                  placeholder="الاسم الكامل كما هو في الهوية" 
+                  {...field} 
+                  className="py-3.5 text-base rounded-md bg-muted/30 cursor-not-allowed" 
+                  readOnly // Name is pre-filled from authenticated user
+                  />
               </FormControl>
+              <FormDescription className="text-xs">
+                سيتم استخدام الاسم المسجل في حسابك.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

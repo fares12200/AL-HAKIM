@@ -5,13 +5,13 @@ import {
   addDoc, 
   getDocs, 
   doc, 
-  getDoc as fbGetDoc, // Renamed to avoid conflict if service had its own getDoc
+  getDoc as fbGetDoc, 
   updateDoc, 
   deleteDoc, 
   query, 
   where, 
   serverTimestamp,
-  type Timestamp // Import Timestamp for type safety if needed for createdAt/updatedAt
+  type Timestamp 
 } from 'firebase/firestore';
 
 /**
@@ -33,7 +33,7 @@ export interface Appointment {
   /**
    * The patient's name (denormalized for easier display).
    */
-  patientName?: string;
+  patientName?: string; // This should come from the form, linked to patientId
   /**
    * The appointment's date in 'yyyy-MM-dd' format.
    */
@@ -53,11 +53,11 @@ export interface Appointment {
   /**
    * Timestamp of when the appointment was created.
    */
-  createdAt?: Timestamp | Date | any; // Firestore ServerTimestamp or Date
+  createdAt?: Timestamp | Date | any; 
    /**
    * Timestamp of when the appointment was last updated.
    */
-  updatedAt?: Timestamp | Date | any; // Firestore ServerTimestamp or Date
+  updatedAt?: Timestamp | Date | any; 
 }
 
 /**
@@ -131,26 +131,38 @@ export async function getAppointment(id: string): Promise<Appointment | null> {
 /**
  * Asynchronously creates a new appointment in Firestore.
  *
- * @param appointmentData The data for the appointment to create (excluding ID).
+ * @param appointmentData The data for the appointment to create (excluding ID, createdAt, updatedAt, status).
+ *                        It must include doctorId, patientId, patientName, date, time, and optional notes.
  * @returns A promise that resolves to the created Appointment object with its new ID.
  */
 export async function createAppointment(appointmentData: Omit<Appointment, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<Appointment> {
   if (!firestore) throw new Error("Firestore is not initialized. Check configuration and console logs.");
+  if (!appointmentData.patientId) {
+    throw new Error("Patient ID is required to create an appointment.");
+  }
   try {
     const appointmentsCol = collection(firestore, 'appointments');
     const newAppointmentPayload = {
-      ...appointmentData,
-      status: 'pending' as const, // Default status
+      ...appointmentData, // patientId and patientName are now passed directly
+      status: 'pending' as const, 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
     const docRef = await addDoc(appointmentsCol, newAppointmentPayload);
+    
+    // Fetch the doctor's name to include in the return object or for notifications (optional here)
+    // const doctorDoc = await getDoc(doc(firestore, 'users', appointmentData.doctorId));
+    // const doctorName = doctorDoc.exists() ? doctorDoc.data()?.name : 'الطبيب';
+
     return { 
-        ...appointmentData, 
         id: docRef.id, 
+        doctorId: appointmentData.doctorId,
+        patientId: appointmentData.patientId,
+        patientName: appointmentData.patientName,
+        date: appointmentData.date,
+        time: appointmentData.time,
+        notes: appointmentData.notes,
         status: 'pending', 
-        // Note: serverTimestamp() resolves on the server, so createdAt/updatedAt will be populated after retrieval
-        // For immediate client-side use, you might use new Date() if a server timestamp isn't strictly needed right away.
     } as Appointment; 
   } catch (error) {
     console.error("Error creating appointment:", error);
