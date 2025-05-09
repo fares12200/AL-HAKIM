@@ -1,3 +1,4 @@
+
 'use client';
 import Link from 'next/link';
 import { Stethoscope, Home, CalendarPlus, Users, HeartPulse, UserCircle, Menu, LogOut, LayoutDashboard, UserCog, Briefcase } from 'lucide-react';
@@ -63,7 +64,7 @@ export default function Navbar() {
     if (!user) return null;
     const profilePath = user.role === 'doctor' ? `/doctor/profile` : `/patient/profile`;
     const profileLabel = user.role === 'doctor' ? 'الملف المهني' : 'الملف الشخصي';
-    const ProfileSpecificIcon = user.role === 'doctor' ? Briefcase : UserCog; // Renamed to PascalCase
+    const ProfileSpecificIcon = user.role === 'doctor' ? Briefcase : UserCog;
 
     return (
          isMobile ? (
@@ -101,6 +102,14 @@ export default function Navbar() {
         ) : (
             <Link key={link.href} href={link.href} passHref>
             <Button variant="ghost" className="flex items-center justify-center gap-2 text-foreground hover:text-primary text-md px-4 py-2 rounded-lg">
+                {user && link.label === 'لوحة التحكم' && (
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png?size=24`} alt={user.displayName || 'User'} />
+                    <AvatarFallback className="text-xs bg-primary/20 text-primary font-semibold">
+                      {user.displayName?.[0]?.toUpperCase() || (user.email?.[0]?.toUpperCase() || 'U')}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <link.icon size={18} strokeWidth={1.5}/>
                 {link.label}
             </Button>
@@ -123,8 +132,8 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0">
                 <Avatar className="h-10 w-10 border-2 border-primary/50 hover:border-primary transition-colors">
-                  <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email}.png?size=100`} alt={user.displayName || 'User'} />
-                  <AvatarFallback className="bg-primary/20 text-primary font-semibold text-lg">{user.displayName?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                  <AvatarImage src={user.photoURL || `https://avatar.vercel.sh/${user.email || user.uid}.png?size=100`} alt={user.displayName || 'User'} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-semibold text-lg">{user.displayName?.[0]?.toUpperCase() || (user.email?.[0]?.toUpperCase() || 'U')}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -232,3 +241,4 @@ export default function Navbar() {
     </header>
   );
 }
+
